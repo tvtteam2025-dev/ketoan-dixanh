@@ -1090,7 +1090,9 @@ button:disabled {
 .fuel-title { align-items: flex-end; background: linear-gradient(135deg,#f4fbfa,#eef6f8); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 20px; padding: 22px 24px; }
 .fuel-title h2 { margin: 0; }
 .fuel-title p { margin: 6px 0 0; }
+.fuel-title-side { align-items: flex-end; display: grid; gap: 8px; justify-items: end; }
 .fuel-summary { background: #dff5ef; border-radius: 10px; color: #087d6b; font-weight: 900; padding: 11px 14px; white-space: nowrap; }
+.fuel-import-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
 .fuel-form { background: #f7fbfb; border-bottom: 1px solid var(--line); display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(150px, 1fr)); padding: 18px 24px; }
 .fuel-cache-hint { color: #60777d; font-size: .76rem; grid-column: 1 / -1; margin-bottom: -2px; }
 .fuel-form label { color: #395d63; display: grid; font-size: .78rem; font-weight: 800; gap: 6px; }
@@ -1098,6 +1100,13 @@ button:disabled {
 .fuel-form input[readonly] { background: #edf3f4; color: #60777d; }
 .fuel-form-actions { align-items: center; display: flex; gap: 10px; grid-column: 1 / -1; }
 .fuel-form-actions .form-status { flex: 1; }
+.fuel-list-toolbar { align-items: center; background: #fbfefe; border-bottom: 1px solid var(--line); display: flex; gap: 14px; justify-content: space-between; padding: 12px 24px; }
+.fuel-list-search { align-items: center; background: #fff; border: 1px solid #bfd4d7; border-radius: 10px; display: flex; max-width: 520px; padding: 0 12px; width: 100%; }
+.fuel-list-search:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,139,135,.12); }
+.fuel-list-search > span { color: #52757b; font-size: 1.35rem; line-height: 1; transform: rotate(-20deg); }
+.fuel-list-search input { background: transparent; border: 0; box-shadow: none; min-height: 42px; min-width: 0; width: 100%; }
+.fuel-list-search input:focus { box-shadow: none; }
+.fuel-search-result { color: #60777d; font-size: .78rem; font-weight: 800; white-space: nowrap; }
 .fuel-standard-panel { background: #fbfefe; border-top: 1px solid var(--line); }
 .fuel-standard-heading { align-items: flex-end; display: flex; gap: 18px; justify-content: space-between; padding: 20px 24px 14px; }
 .fuel-standard-heading h3 { color: #12343b; margin: 0; }
@@ -1127,8 +1136,8 @@ button:disabled {
 .fuel-table-wrap { max-height: calc(100vh - 370px); overflow: auto; }
 .fuel-table-wrap table { min-width: 1200px; }
 .fuel-table-wrap td small { color: #7b8f93; display: block; font-size: .68rem; margin-top: 2px; }
-@media(max-width:900px){.fuel-title{align-items:flex-start;flex-direction:column}.fuel-form{grid-template-columns:repeat(2,minmax(150px,1fr))}.fuel-table-wrap{max-height:calc(100vh - 430px)}.fuel-standard-table-wrap{height:calc(100vh - 470px);min-height:320px}}
-@media(max-width:560px){.fuel-form{grid-template-columns:1fr}.fuel-form-actions{align-items:stretch;flex-direction:column}.fuel-form-actions .form-status{min-height:20px}}
+@media(max-width:900px){.fuel-title{align-items:flex-start;flex-direction:column}.fuel-title-side{align-items:flex-start;justify-items:start}.fuel-import-actions{justify-content:flex-start}.fuel-form{grid-template-columns:repeat(2,minmax(150px,1fr))}.fuel-table-wrap{max-height:calc(100vh - 430px)}.fuel-standard-table-wrap{height:calc(100vh - 470px);min-height:320px}}
+@media(max-width:560px){.fuel-form{grid-template-columns:1fr}.fuel-form-actions{align-items:stretch;flex-direction:column}.fuel-form-actions .form-status{min-height:20px}.fuel-list-toolbar{align-items:stretch;flex-direction:column}.fuel-list-search{max-width:none}.fuel-search-result{padding-left:2px}}
 @media(max-width:900px){.fuel-standard-heading{align-items:flex-start;flex-direction:column}.fuel-price-form{grid-template-columns:repeat(2,minmax(170px,1fr))}}
 @media(max-width:560px){.fuel-price-form{grid-template-columns:1fr}.fuel-standard-toolbar{align-items:stretch;flex-direction:column}.fuel-standard-toolbar label{min-width:0}}
 .attendance-legend { align-items: center; display: flex; flex-wrap: wrap; gap: 18px; min-height: 52px; padding: 10px 24px; }
@@ -1179,6 +1188,9 @@ button:disabled {
 .salary-allowance-list { display: grid; gap: 4px; min-width: 170px; }
 .salary-allowance-line { display: flex; justify-content: space-between; gap: 14px; white-space: nowrap; }
 .salary-allowance-line span { color: #395d63; }
+.salary-list-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: 1; margin-left: 20px; }
+.salary-list-search { width: min(510px, 100%); min-width: 260px; }
+@media (max-width: 900px) { .salary-list-actions { width: 100%; margin-left: 0; justify-content: stretch; } .salary-list-search { flex: 1; min-width: 0; } }
 .payroll-title { align-items: flex-end; }
 .payroll-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; justify-content: flex-end; }
 .payroll-controls label { display: grid; gap: 5px; color: #526f74; font-size: .76rem; font-weight: 800; text-transform: uppercase; }
@@ -1223,6 +1235,16 @@ button:disabled {
 .payroll-note-input:focus { outline: 2px solid #12a99a; outline-offset: 1px; background: #fff; }
 .payroll-note-input:disabled { opacity: .65; cursor: not-allowed; }
 .payroll-note-input.payroll-note-required { border-color: #d97706; background: #fff8eb; }
+.payroll-holiday-bonus { color: #087d6b; font-weight: 800; }
+#payrollHolidayDialog { width: min(820px, calc(100% - 32px)); max-width: 820px; }
+.payroll-holiday-dialog-panel { width: 100%; max-width: none; }
+.payroll-holiday-form { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(260px, 1.3fr) auto; gap: 12px; align-items: end; padding: 16px 22px 18px; border-top: 1px solid #e0ebec; }
+.payroll-holiday-form label { display: grid; gap: 6px; color: #395d63; font-size: .8rem; font-weight: 800; }
+.payroll-holiday-form .fuel-form-actions { align-self: end; }
+.payroll-holiday-list { max-height: 420px; }
+.payroll-holiday-list table { min-width: 680px; }
+.payroll-holiday-list td:nth-child(2) { white-space: nowrap; }
+@media (max-width: 760px) { .payroll-holiday-form { grid-template-columns: 1fr; } }
 .car-wash-report-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 14px 0; border-top: 1px solid #d7e5e7; }
 .car-wash-report-toolbar label { display: grid; gap: 5px; color: #526f74; font-size: .76rem; font-weight: 800; text-transform: uppercase; }
 .car-wash-report-toolbar input { min-width: 165px; }
@@ -1249,9 +1271,11 @@ button:disabled {
 .deduction-status { display: inline-flex; border-radius: 999px; padding: 4px 9px; font-size: .74rem; font-weight: 800; white-space: nowrap; }
 .deduction-status.active { background: #dff3f0; color: #087d6b; }
 .deduction-status.inactive { background: #edf1f2; color: #718184; }
-.deduction-type-dialog-panel { max-width: 560px; }
+#deductionTypeDialog { width: min(560px, calc(100% - 32px)); max-width: 560px; }
+.deduction-type-dialog-panel { width: 100%; max-width: none; }
 .deduction-type-dialog-panel .salary-form { grid-template-columns: 1fr; }
-.deduction-dialog-panel { max-width: 720px; }
+#deductionDialog { width: min(720px, calc(100% - 32px)); max-width: 720px; }
+.deduction-dialog-panel { width: 100%; max-width: none; }
 .deduction-dialog-panel .salary-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .deduction-employee-summary, .deduction-existing-list { grid-column: 1 / -1; padding: 11px 13px; border: 1px solid #cfe4e5; border-radius: 10px; background: #f3fafa; }
 .deduction-employee-summary { display: flex; flex-direction: column; gap: 3px; color: #557276; }

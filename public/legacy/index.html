@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kế toán Đi Xanh</title>
-    <link rel="stylesheet" href="/legacy/styles.css?v=fuel-search-datetime-20260915-2" />
+    <link rel="stylesheet" href="/legacy/styles.css?v=salary-search-20260920-1" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen">
@@ -491,7 +491,7 @@
           <div class="panel salary-panel">
             <div class="panel-title">
               <div><h2>Khai báo lương lái xe</h2><p>Mỗi mức lương được lưu theo tháng hiệu lực để bảo toàn bảng lương quá khứ.</p></div>
-              <button id="openSalaryDialog" type="button">+ Thêm</button>
+              <div class="salary-list-actions"><input id="driverSalarySearch" class="search-input salary-list-search" type="search" placeholder="Tìm tên lái xe, mã NV, ngân hàng..." aria-label="Tìm kiếm khai báo lương" /><button id="openSalaryDialog" type="button">+ Thêm</button></div>
             </div>
             <div class="table-wrap"><table><thead><tr><th>Mã NV</th><th>Họ và tên</th><th>Tháng áp dụng</th><th>Ngân hàng</th><th>Số tài khoản</th><th>Chủ tài khoản</th><th>Lương cơ bản</th><th>Các khoản phụ cấp</th><th>Tổng phụ cấp</th><th>Tổng lương</th><th>Người khai báo</th><th>Thao tác</th></tr></thead><tbody id="driverSalaryTable"></tbody></table></div>
             <dialog id="salaryDialog" class="salary-dialog">
@@ -526,23 +526,34 @@
           <div class="panel fuel-panel">
             <div class="panel-title fuel-title">
               <div><span class="attendance-eyebrow">CHI PHÍ VẬN HÀNH</span><h2>Quản lý xăng lái xe Travel</h2><p>Nhập nhiên liệu và quãng đường theo từng lần đổ xăng.</p></div>
-              <div id="fuelSummary" class="fuel-summary">0 lần đổ · 0 VNĐ</div>
+              <div class="fuel-title-side">
+                <div id="fuelSummary" class="fuel-summary">0 lần đổ · 0 VNĐ</div>
+                <div class="fuel-import-actions">
+                  <button class="secondary small" id="fuelImportTemplateButton" type="button">Tải file mẫu</button>
+                  <button class="small" id="fuelImportButton" type="button">Import Excel</button>
+                  <input id="fuelImportInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+                </div>
+              </div>
             </div>
             <form id="fuelForm" class="fuel-form">
               <div class="fuel-cache-hint">Loại nhiên liệu và đơn giá sẽ tự điền theo lần nhập gần nhất; hệ thống cũng tra mốc taplo trước đó để tính sẵn số km đi được.</div>
               <input id="fuelRecordId" type="hidden" />
               <label class="required">Ngày<input id="fuelDate" type="date" required /></label>
               <label class="required">Tài xế<select id="fuelDriver" data-searchable="true" required><option value="">Chọn tài xế Travel</option></select></label>
-              <label>Biển số xe<input id="fuelPlate" type="text" readonly placeholder="Tự động theo tài xế" /></label>
+              <label class="required">Biển số xe<select id="fuelPlate" data-searchable="true" required><option value="">Chọn biển số xe</option></select></label>
               <label class="required">Loại nhiên liệu<select id="fuelType" required><option value="Xăng E5 RON92">Xăng E5 RON92</option><option value="Xăng E10 RON95 Mức 3">Xăng E10 RON95 Mức 3</option><option value="Xăng RON95">Xăng RON95</option><option value="Dầu Diesel">Dầu Diesel</option><option value="Khác">Khác</option></select></label>
               <label class="required">Số lít<input id="fuelLiters" type="text" inputmode="decimal" placeholder="0" required /></label>
               <label class="required">Đơn giá / lít<input id="fuelPrice" type="text" inputmode="numeric" placeholder="0" required /></label>
               <label>Thành tiền (VNĐ)<input id="fuelAmount" type="text" readonly value="0" /></label>
               <label>Taplo khai báo gần nhất<input id="fuelPreviousOdometer" type="text" readonly value="Chưa chọn tài xế" /><small id="fuelPreviousOdometerHint" class="fuel-reference-hint" aria-live="polite">Chọn tài xế để tra lần khai báo gần nhất.</small></label>
               <label class="required">Số km taplo hiện tại<input id="fuelOdometer" type="text" inputmode="decimal" placeholder="0" required /></label>
-              <label class="required">Số km đi được<input id="fuelDistance" type="text" inputmode="decimal" placeholder="0" required /><small id="fuelDistanceHint" class="fuel-reference-hint" aria-live="polite">Tự tính từ hai mốc taplo khi có dữ liệu.</small></label>
+              <label class="required">Số km đi được<input id="fuelDistance" type="text" inputmode="decimal" placeholder="0" required /><small id="fuelDistanceHint" class="fuel-reference-hint" aria-live="polite">Tự tính từ hai mốc taplo; khi sửa mốc cũ, các mốc phía sau sẽ cập nhật lại.</small></label>
               <div class="fuel-form-actions"><span id="fuelFormStatus" class="form-status"></span><button id="fuelSubmitButton" type="submit">Lưu lần đổ xăng</button><button class="secondary" id="fuelCancelButton" type="button" hidden>Hủy sửa</button></div>
             </form>
+            <div class="fuel-list-toolbar">
+              <label class="fuel-list-search" for="fuelDriverSearch"><span aria-hidden="true">⌕</span><input id="fuelDriverSearch" type="search" autocomplete="off" placeholder="Tìm tên lái xe, mã NV hoặc biển số..." /></label>
+              <span id="fuelSearchResult" class="fuel-search-result" aria-live="polite"></span>
+            </div>
             <div class="table-wrap fuel-table-wrap"><table><thead><tr><th>STT</th><th>Ngày</th><th>Tài xế</th><th>BSX</th><th>Loại nhiên liệu</th><th>Số lít</th><th>Đơn giá / lít</th><th>Thành tiền (VNĐ)</th><th>Số km taplo</th><th>Số km đã chạy (Km)</th><th>Thao tác</th></tr></thead><tbody id="fuelTable"></tbody></table></div>
           </div>
         </section>
@@ -583,10 +594,11 @@
         <section id="payrollView" class="view">
           <div class="panel payroll-panel">
             <div class="panel-title payroll-title">
-              <div><h2>Bảng lương lái xe</h2><p>Tính lương theo công, phụ cấp, tăng ca và thưởng đủ công.</p></div>
+              <div><h2>Bảng lương lái xe</h2><p>Tính lương theo công, phụ cấp, tăng ca, thưởng đủ công và thưởng ngày lễ.</p></div>
               <div class="payroll-controls">
                 <label>Nhóm tài xế<select id="payrollViewType"><option value="travel">Lái xe Travel</option><option value="cargo">Xe Hàng</option></select></label>
                 <label>Tháng<input id="payrollMonth" type="month" /></label>
+              <button class="secondary" id="openPayrollHolidayDialog" type="button">Khai báo ngày lễ</button>
               <button id="payrollLockButton" type="button">CHỐT LƯƠNG</button>
               <button class="secondary" id="payrollExport" type="button">Xuất Excel</button>
               <button class="secondary" id="payrollPayslipsZipExport" type="button" title="Mỗi tài xế một file Excel chi tiết">Xuất phiếu lương ZIP</button>
@@ -676,6 +688,19 @@
               <button class="secondary small" id="closeClosedPayrollDetail" type="button">Đóng</button>
             </div>
             <section id="closedPayrollDetailContent" class="payroll-detail-content"></section>
+          </div>
+        </dialog>
+
+        <dialog id="payrollHolidayDialog" class="salary-dialog">
+          <div class="dialog-panel salary-dialog-panel payroll-holiday-dialog-panel">
+            <div class="salary-dialog-title"><div><h2>Khai báo ngày lễ tính lương</h2><p>Áp dụng chung cho lái xe Travel và Xe Hàng. Chỉ tài xế có dấu công X trong ngày lễ mới được nhận thưởng.</p></div><button class="secondary small" id="closePayrollHolidayDialog" type="button">Đóng</button></div>
+            <form id="payrollHolidayForm" class="payroll-holiday-form">
+              <label class="required">Ngày lễ<input id="payrollHolidayDate" type="date" required /></label>
+              <label class="required">Tên ngày lễ<input id="payrollHolidayName" type="text" maxlength="150" placeholder="Ví dụ: Quốc khánh" required /></label>
+              <div class="fuel-form-actions"><span id="payrollHolidayFormStatus" class="form-status"></span><button id="payrollHolidaySubmit" type="submit">Lưu ngày lễ</button></div>
+            </form>
+            <div id="payrollHolidaySummary" class="payroll-summary">Đang tải danh mục ngày lễ...</div>
+            <div class="table-wrap payroll-holiday-list"><table><thead><tr><th>STT</th><th>Ngày</th><th>Tên ngày lễ</th><th>Người khai báo</th><th>Thao tác</th></tr></thead><tbody id="payrollHolidayTableBody"><tr><td colspan="5" class="empty">Chưa có dữ liệu.</td></tr></tbody></table></div>
           </div>
         </dialog>
 
@@ -1910,6 +1935,6 @@
       </form>
     </dialog>
 
-  <script src="/legacy/app.js?v=fuel-odometer-by-vehicle-20260916-3" type="module"></script>
+  <script src="/legacy/app.js?v=salary-search-20260920-1" type="module"></script>
   </body>
 </html>

@@ -30,6 +30,7 @@ const state = {
   cargoAttendance: { month: "", roster: [] },
   driverSalaries: { drivers: [], rows: [] },
   payroll: { month: "", viewType: "travel", rows: [] },
+  payrollHolidays: { month: "", rows: [], locked: false, locks: {} },
   payrollNotes: {},
   closedPayroll: { month: "", viewType: "travel", rows: [], locked: false },
   payrollDeductions: { month: "", rows: [], drivers: [] },
@@ -57,6 +58,7 @@ const state = {
     orderFeedbackStatus: "",
     vehicle: "",
     franchiseVehicle: "",
+    driverSalary: "",
     dashboardDate: "",
     systemLog: "",
     systemLogAction: "",
@@ -336,6 +338,11 @@ const els = {
   fuelForm: document.querySelector("#fuelForm"),
   fuelTable: document.querySelector("#fuelTable"),
   fuelSummary: document.querySelector("#fuelSummary"),
+  fuelImportTemplateButton: document.querySelector("#fuelImportTemplateButton"),
+  fuelImportButton: document.querySelector("#fuelImportButton"),
+  fuelImportInput: document.querySelector("#fuelImportInput"),
+  fuelDriverSearch: document.querySelector("#fuelDriverSearch"),
+  fuelSearchResult: document.querySelector("#fuelSearchResult"),
   fuelRecordId: document.querySelector("#fuelRecordId"),
   fuelDate: document.querySelector("#fuelDate"),
   fuelDriver: document.querySelector("#fuelDriver"),
@@ -3674,9 +3681,28 @@ function renderFuelDrivers(selectedCode = els.fuelDriver?.value || "") {
   els.fuelDriver.value = selectedCode;
 }
 
+function renderFuelPlates(selectedPlate = els.fuelPlate?.value || "") {
+  if (!els.fuelPlate) return;
+  const plateMap = new Map();
+  const rememberPlate = (value) => {
+    const label = String(value || "").trim().toUpperCase();
+    const key = normalizeFuelPlate(label);
+    if (key && !plateMap.has(key)) plateMap.set(key, label);
+  };
+  (state.fuel?.drivers || []).forEach((driver) => rememberPlate(driver.bienKiemSoat));
+  (state.fuel?.rows || []).forEach((row) => rememberPlate(row.bienKiemSoat));
+  rememberPlate(selectedPlate);
+  const selectedKey = normalizeFuelPlate(selectedPlate);
+  const plates = [...plateMap.entries()].sort((left, right) => left[1].localeCompare(right[1], "vi"));
+  els.fuelPlate.innerHTML = `<option value="">Chọn biển số xe</option>${plates.map(([key, label]) => `<option value="${escapeHtml(label)}"${key === selectedKey ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}`;
+  syncSearchableSelect(els.fuelPlate);
+}
+
 function updateFuelPlate() {
   const option = els.fuelDriver?.selectedOptions?.[0];
-  if (els.fuelPlate) els.fuelPlate.value = option?.dataset.plate || "";
+  if (!els.fuelPlate) return;
+  const assignedPlate = String(option?.dataset.plate || "").trim().toUpperCase();
+  renderFuelPlates(assignedPlate);
 }
 
 function normalizeFuelPlate(value) {
@@ -3689,9 +3715,14 @@ function latestFuelOdometerRecord() {
   const selectedDate = nativeDateValue(els.fuelDate?.value || "");
   const editingId = String(els.fuelRecordId?.value || "");
   if (!employeeCode && !plate) return null;
+  const sourceRows = state.fuel?.rows || [];
+  const editingIndex = editingId ? sourceRows.findIndex((row) => String(row.id || "") === editingId) : -1;
+  const editingRow = editingIndex >= 0 ? sourceRows[editingIndex] : null;
+  const editingCreatedAt = String(editingRow?.createdAt || "");
 
-  return [...(state.fuel?.rows || [])]
-    .filter((row) => {
+  return sourceRows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row, index }) => {
       if (editingId && String(row.id || "") === editingId) return false;
       const rowPlate = normalizeFuelPlate(row.bienKiemSoat || "");
       // Taplo belongs to the vehicle, not the driver. When a plate is known,
@@ -3701,17 +3732,24 @@ function latestFuelOdometerRecord() {
       } else if (normalize(row.employeeCode) !== employeeCode) return false;
       const rowDate = nativeDateValue(row.ngay || "");
       if (selectedDate && rowDate && rowDate > selectedDate) return false;
+      if (editingRow && selectedDate && rowDate === selectedDate) {
+        const rowCreatedAt = String(row.createdAt || "");
+        if (editingCreatedAt && rowCreatedAt) {
+          if (rowCreatedAt >= editingCreatedAt) return false;
+        } else if (index >= editingIndex) return false;
+      }
       return fuelNumber(row.soKmTaplo) > 0;
     })
     .sort((left, right) => {
-      const leftDate = nativeDateValue(left.ngay || "");
-      const rightDate = nativeDateValue(right.ngay || "");
+      const leftDate = nativeDateValue(left.row.ngay || "");
+      const rightDate = nativeDateValue(right.row.ngay || "");
       return rightDate.localeCompare(leftDate)
-        || String(right.updatedAt || right.createdAt || "").localeCompare(String(left.updatedAt || left.createdAt || ""));
-    })[0] || null;
+        || String(right.row.createdAt || "").localeCompare(String(left.row.createdAt || ""))
+        || right.index - left.index;
+    })[0]?.row || null;
 }
 
-function updateFuelOdometerReference({ clearDistanceWhenMissing = false } = {}) {
+function updateFuelOdometerReference({ clearDistanceWhenMissing = false, preserveDistance = false } = {}) {
   if (!els.fuelPreviousOdometer || !els.fuelDistance) return;
   const employeeCode = els.fuelDriver?.value || "";
   const previous = latestFuelOdometerRecord();
@@ -3753,15 +3791,21 @@ function updateFuelOdometerReference({ clearDistanceWhenMissing = false } = {}) 
   const currentOdometer = fuelNumber(currentText);
   const distance = currentOdometer - previousOdometer;
   if (distance < 0) {
-    els.fuelDistance.value = "";
+    if (!preserveDistance) els.fuelDistance.value = "";
     if (els.fuelDistanceHint) {
-      els.fuelDistanceHint.textContent = `Taplo hiện tại phải từ ${formatFuelNumber(previousOdometer)} km trở lên.`;
+      els.fuelDistanceHint.textContent = preserveDistance
+        ? `Đang giữ số km đã lưu. Mốc taplo trước là ${formatFuelNumber(previousOdometer)} km.`
+        : `Taplo hiện tại phải từ ${formatFuelNumber(previousOdometer)} km trở lên.`;
       els.fuelDistanceHint.classList.add("fuel-reference-warning");
     }
     return;
   }
-  els.fuelDistance.value = formatFuelNumber(distance);
-  if (els.fuelDistanceHint) els.fuelDistanceHint.textContent = `Đã điền sẵn: ${formatFuelNumber(currentOdometer)} − ${formatFuelNumber(previousOdometer)} = ${formatFuelNumber(distance)} km; có thể chỉnh lại.`;
+  if (!preserveDistance) els.fuelDistance.value = formatFuelNumber(distance);
+  if (els.fuelDistanceHint) {
+    els.fuelDistanceHint.textContent = preserveDistance
+      ? `Đang giữ số km đã lưu; thay đổi taplo để tính lại từ mốc ${formatFuelNumber(previousOdometer)} km.`
+      : `Đã điền sẵn: ${formatFuelNumber(currentOdometer)} − ${formatFuelNumber(previousOdometer)} = ${formatFuelNumber(distance)} km; có thể chỉnh lại.`;
+  }
 }
 
 function updateFuelAmount() {
@@ -3772,7 +3816,7 @@ function resetFuelForm() {
   if (!els.fuelForm) return;
   els.fuelForm.reset();
   if (els.fuelRecordId) els.fuelRecordId.value = "";
-  if (els.fuelDate) els.fuelDate.value = localDateForInput();
+  if (els.fuelDate) { els.fuelDate.disabled = false; els.fuelDate.value = localDateForInput(); }
   if (els.fuelAmount) els.fuelAmount.value = "0";
   if (els.fuelSubmitButton) els.fuelSubmitButton.textContent = "Lưu lần đổ xăng";
   if (els.fuelCancelButton) els.fuelCancelButton.hidden = true;
@@ -3786,10 +3830,17 @@ function resetFuelForm() {
 function renderFuelRecords() {
   if (!els.fuelTable) return;
   renderFuelDrivers(els.fuelDriver?.value || "");
-  const rows = [...(state.fuel?.rows || [])].sort((a, b) => String(b.ngay || "").localeCompare(String(a.ngay || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
-  const total = rows.reduce((sum, row) => sum + fuelNumber(row.thanhTien), 0);
-  if (els.fuelSummary) els.fuelSummary.textContent = `${rows.length.toLocaleString("vi-VN")} lần đổ · ${formatMoney(total)} VNĐ`;
-  els.fuelTable.innerHTML = rows.map((row, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(formatDate(row.ngay))}</td><td><strong>${escapeHtml(row.employeeName || row.employeeCode)}</strong><small>${escapeHtml(row.employeeCode || "")}</small></td><td>${escapeHtml(row.bienKiemSoat || "")}</td><td>${escapeHtml(row.loaiNhienLieu || "")}</td><td>${formatFuelNumber(row.soLit)}</td><td>${formatMoney(row.donGiaLit)}</td><td><strong>${formatMoney(row.thanhTien)}</strong></td><td>${formatFuelNumber(row.soKmTaplo)}</td><td>${formatFuelNumber(row.soKmDaChay)}</td><td><div class="row-actions"><button class="small secondary" data-action="edit-fuel" data-id="${escapeHtml(row.id)}" type="button">Sửa</button><button class="small danger" data-action="delete-fuel" data-id="${escapeHtml(row.id)}" type="button">Xóa</button></div></td></tr>`).join("") || `<tr><td colspan="11" class="empty">Chưa có dữ liệu đổ xăng.</td></tr>`;
+  renderFuelPlates(els.fuelPlate?.value || "");
+  const allRows = [...(state.fuel?.rows || [])].sort((a, b) => String(b.ngay || "").localeCompare(String(a.ngay || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const query = normalize(els.fuelDriverSearch?.value || "");
+  const rows = query
+    ? allRows.filter((row) => normalize([row.employeeName, row.employeeCode, row.bienKiemSoat].join(" ")).includes(query))
+    : allRows;
+  const total = allRows.reduce((sum, row) => sum + fuelNumber(row.thanhTien), 0);
+  if (els.fuelSummary) els.fuelSummary.textContent = `${allRows.length.toLocaleString("vi-VN")} lần đổ · ${formatMoney(total)} VNĐ`;
+  if (els.fuelSearchResult) els.fuelSearchResult.textContent = query ? `${rows.length.toLocaleString("vi-VN")}/${allRows.length.toLocaleString("vi-VN")} kết quả` : `${allRows.length.toLocaleString("vi-VN")} bản ghi`;
+  const emptyMessage = query ? "Không tìm thấy lái xe phù hợp." : "Chưa có dữ liệu đổ xăng.";
+  els.fuelTable.innerHTML = rows.map((row, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(formatDate(row.ngay))}</td><td><strong>${escapeHtml(row.employeeName || row.employeeCode)}</strong><small>${escapeHtml(row.employeeCode || "")}</small></td><td>${escapeHtml(row.bienKiemSoat || "")}</td><td>${escapeHtml(row.loaiNhienLieu || "")}</td><td>${formatFuelNumber(row.soLit)}</td><td>${formatMoney(row.donGiaLit)}</td><td><strong>${formatMoney(row.thanhTien)}</strong></td><td>${formatFuelNumber(row.soKmTaplo)}</td><td>${formatFuelNumber(row.soKmDaChay)}</td><td><div class="row-actions"><button class="small secondary" data-action="edit-fuel" data-id="${escapeHtml(row.id)}" type="button">Sửa</button><button class="small danger" data-action="delete-fuel" data-id="${escapeHtml(row.id)}" type="button">Xóa</button></div></td></tr>`).join("") || `<tr><td colspan="11" class="empty">${emptyMessage}</td></tr>`;
   updateFuelOdometerReference();
 }
 
@@ -3848,17 +3899,64 @@ async function loadFuelRecords() {
   try {
     const month = els.fuelStandardMonth?.value || localMonthForInput();
     if (els.fuelStandardMonth) els.fuelStandardMonth.value = month;
-    const [fuel, prices, standard] = await Promise.all([
+    const [fuelResult, pricesResult, standardResult] = await Promise.allSettled([
       fetchJson("/api/proxy/accounting/fuel", {}, 90000),
       fetchJson("/api/proxy/accounting/fuel-prices", {}, 90000),
       fetchJson(`/api/proxy/accounting/fuel-standard?month=${encodeURIComponent(month)}`, {}, 90000),
     ]);
+    if (fuelResult.status === "rejected") throw fuelResult.reason;
+    const fuel = fuelResult.value;
+    const prices = pricesResult.status === "fulfilled" ? pricesResult.value : { rows: state.fuel?.prices || [] };
+    const standard = standardResult.status === "fulfilled"
+      ? standardResult.value
+      : { rows: state.fuel?.standard || [], month, standardRate: state.fuel?.standardRate || 0.075, price: state.fuel?.price || 0, priceDeclared: Boolean(state.fuel?.priceDeclared) };
     state.fuel = { ...fuel, prices: prices.rows || [], standard: standard.rows || [], standardMonth: standard.month || month, standardRate: standard.standardRate || 0.075, price: standard.price || 0, priceDeclared: Boolean(standard.priceDeclared), standardLocked: Boolean(standard.locked), standardLockedBy: standard.lockedBy || "", standardLockedAt: standard.lockedAt || "" };
     renderFuelRecords();
     renderFuelPrices();
     renderFuelStandard();
+    const secondaryErrors = [];
+    if (pricesResult.status === "rejected") secondaryErrors.push("giá xăng");
+    if (standardResult.status === "rejected") secondaryErrors.push("định mức");
+    if (secondaryErrors.length && els.fuelFormStatus) els.fuelFormStatus.textContent = `Đã tải danh sách đổ xăng; tạm thời chưa tải được ${secondaryErrors.join(" và ")}.`;
   } catch (error) {
     if (els.fuelFormStatus) els.fuelFormStatus.textContent = error.message || "Không thể tải dữ liệu xăng.";
+  }
+}
+
+function downloadFuelImportTemplate() {
+  window.location.href = "/api/proxy/accounting/fuel/import-template";
+}
+
+async function importFuelExcel(file) {
+  if (!file) return;
+  if (!String(file.name || "").toLowerCase().endsWith(".xlsx")) {
+    alert("Vui lòng chọn file Excel .xlsx theo mẫu.");
+    return;
+  }
+  if (!confirm(`Import dữ liệu đổ xăng từ file ${file.name}?`)) return;
+  if (els.fuelImportButton) els.fuelImportButton.disabled = true;
+  if (els.fuelFormStatus) els.fuelFormStatus.textContent = "Đang kiểm tra và import file Excel...";
+  try {
+    const result = await fetchJson("/api/proxy/accounting/fuel/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      body: file,
+    }, 180000);
+    await loadFuelRecords();
+    const imported = Number(result?.importedCount || 0);
+    const skipped = Number(result?.skippedCount || 0);
+    const recalculated = Number(result?.recalculatedCount || 0);
+    const errorPreview = (result?.errors || []).slice(0, 8).map((item) => `Dòng ${item.row}: ${item.message}`).join("\n");
+    const summary = `Đã import ${imported.toLocaleString("vi-VN")} dòng${skipped ? `; bỏ qua ${skipped.toLocaleString("vi-VN")} dòng` : ""}${recalculated ? `; cập nhật ${recalculated.toLocaleString("vi-VN")} mốc km phía sau` : ""}.`;
+    if (els.fuelFormStatus) els.fuelFormStatus.textContent = summary;
+    alert(errorPreview ? `${summary}\n\n${errorPreview}${skipped > 8 ? "\n..." : ""}` : summary);
+  } catch (error) {
+    const message = error.message || "Không thể import dữ liệu đổ xăng.";
+    if (els.fuelFormStatus) els.fuelFormStatus.textContent = message;
+    alert(message);
+  } finally {
+    if (els.fuelImportButton) els.fuelImportButton.disabled = false;
+    if (els.fuelImportInput) els.fuelImportInput.value = "";
   }
 }
 
@@ -3940,18 +4038,26 @@ async function saveFuelRecord(event) {
   };
   if (!payload.employeeCode) { els.fuelFormStatus.textContent = "Vui lòng chọn tài xế Travel."; return; }
   const previous = latestFuelOdometerRecord();
-  if (previous && payload.soKmTaplo < fuelNumber(previous.soKmTaplo)) {
+  const existing = id ? (state.fuel?.rows || []).find((row) => String(row.id || "") === String(id)) : null;
+  const odometerContextChanged = !existing
+    || normalizeFuelPlate(existing.bienKiemSoat) !== normalizeFuelPlate(payload.bienKiemSoat)
+    || nativeDateValue(existing.ngay) !== nativeDateValue(payload.ngay)
+    || fuelNumber(existing.soKmTaplo) !== payload.soKmTaplo;
+  if (odometerContextChanged && previous && payload.soKmTaplo < fuelNumber(previous.soKmTaplo)) {
     els.fuelFormStatus.textContent = `Số km taplo hiện tại không được nhỏ hơn mốc gần nhất ${formatFuelNumber(previous.soKmTaplo)} km.`;
     return;
   }
   els.fuelSubmitButton.disabled = true;
   els.fuelFormStatus.textContent = "Đang lưu...";
   try {
-    await fetchJson(id ? `/api/proxy/accounting/fuel/${encodeURIComponent(id)}` : "/api/proxy/accounting/fuel", { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const result = await fetchJson(id ? `/api/proxy/accounting/fuel/${encodeURIComponent(id)}` : "/api/proxy/accounting/fuel", { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     saveFuelFormDefaults(payload);
     await loadFuelRecords();
     resetFuelForm();
-    els.fuelFormStatus.textContent = "Đã lưu dữ liệu đổ xăng.";
+    const recalculatedCount = Number(result?.recalculatedCount || 0);
+    els.fuelFormStatus.textContent = recalculatedCount
+      ? `Đã lưu và cập nhật lại ${recalculatedCount.toLocaleString("vi-VN")} mốc km phía sau.`
+      : "Đã lưu dữ liệu đổ xăng.";
   } catch (error) {
     els.fuelFormStatus.textContent = error.message || "Không thể lưu dữ liệu xăng.";
   } finally { els.fuelSubmitButton.disabled = false; }
@@ -3962,14 +4068,15 @@ function editFuelRecord(id) {
   if (!row) return;
   els.fuelRecordId.value = row.id;
   els.fuelDate.value = nativeDateValue(row.ngay) || row.ngay || "";
+  els.fuelDate.disabled = true;
   renderFuelDrivers(row.employeeCode);
-  els.fuelPlate.value = row.bienKiemSoat || "";
+  renderFuelPlates(row.bienKiemSoat || "");
   els.fuelType.value = row.loaiNhienLieu || "Khác";
   els.fuelLiters.value = formatFuelNumber(row.soLit);
   els.fuelPrice.value = formatMoney(row.donGiaLit);
   els.fuelOdometer.value = formatFuelNumber(row.soKmTaplo);
   els.fuelDistance.value = formatFuelNumber(row.soKmDaChay);
-  updateFuelOdometerReference();
+  updateFuelOdometerReference({ preserveDistance: true });
   updateFuelAmount();
   els.fuelSubmitButton.textContent = "Cập nhật lần đổ xăng";
   els.fuelCancelButton.hidden = false;
@@ -4119,13 +4226,15 @@ function closeSalaryDialog() {
 }
 
 function renderDriverSalaries() {
-  const select=document.querySelector("#salaryDriverSelect"),table=document.querySelector("#driverSalaryTable");
+  const select=document.querySelector("#salaryDriverSelect"),table=document.querySelector("#driverSalaryTable"),search=document.querySelector("#driverSalarySearch");
   if(!select || !table) return;
   const selected=select.value;
   select.innerHTML=`<option value="">Chọn lái xe</option>${(state.driverSalaries.drivers||[]).map(driver=>`<option value="${escapeHtml(driver.employeeCode)}" data-name="${escapeHtml(driver.employeeName)}">${escapeHtml(driver.employeeName)} · ${escapeHtml(driver.employeeCode)}</option>`).join("")}`;
   if([...select.options].some(option=>option.value===selected)) select.value=selected;
   document.querySelectorAll(".salary-allowance-type").forEach(allowanceSelect=>{const value=allowanceSelect.value;allowanceSelect.innerHTML=salaryAllowanceOptions(value);});
-  table.innerHTML=(state.driverSalaries.rows||[]).map(row=>{const allowances=salaryAllowancesForRow(row),allowanceTotal=allowances.reduce((sum,item)=>sum+salaryNumber(item.amount),0);return `<tr><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td>${escapeHtml(row.employeeName)}</td><td>${escapeHtml(row.effectiveMonth)}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${escapeHtml(row.accountHolder)}</td><td>${formatMoney(row.baseSalary)}</td><td><div class="salary-allowance-list">${allowances.map(item=>`<div class="salary-allowance-line"><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join("")||"—"}</div></td><td><strong>${formatMoney(allowanceTotal)}</strong></td><td><strong>${formatMoney(salaryNumber(row.baseSalary)+allowanceTotal)}</strong></td><td>${escapeHtml(row.createdBy||"")}</td><td><div class="row-actions"><button class="small secondary" data-action="edit-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Sửa</button><button class="small danger" data-action="delete-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Xóa</button></div></td></tr>`;}).join("")||`<tr><td colspan="12" class="empty">Chưa có khai báo lương.</td></tr>`;
+  const keyword=normalize(state.filters.driverSalary||search?.value||"");
+  const rows=(state.driverSalaries.rows||[]).filter(row=>!keyword||normalize([row.employeeCode,row.employeeName,row.bankName,row.accountNumber,row.accountHolder,row.effectiveMonth].join(" ")).includes(keyword));
+  table.innerHTML=rows.map(row=>{const allowances=salaryAllowancesForRow(row),allowanceTotal=allowances.reduce((sum,item)=>sum+salaryNumber(item.amount),0);return `<tr><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td>${escapeHtml(row.employeeName)}</td><td>${escapeHtml(row.effectiveMonth)}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${escapeHtml(row.accountHolder)}</td><td>${formatMoney(row.baseSalary)}</td><td><div class="salary-allowance-list">${allowances.map(item=>`<div class="salary-allowance-line"><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join("")||"—"}</div></td><td><strong>${formatMoney(allowanceTotal)}</strong></td><td><strong>${formatMoney(salaryNumber(row.baseSalary)+allowanceTotal)}</strong></td><td>${escapeHtml(row.createdBy||"")}</td><td><div class="row-actions"><button class="small secondary" data-action="edit-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Sửa</button><button class="small danger" data-action="delete-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Xóa</button></div></td></tr>`;}).join("")||`<tr><td colspan="12" class="empty">${keyword?"Không tìm thấy khai báo lương phù hợp.":"Chưa có khai báo lương."}</td></tr>`;
   if(!document.querySelector("#salaryEffectiveMonth")?.value) document.querySelector("#salaryEffectiveMonth").value=localMonthForInput();
   updateSalaryTotalPreview();
   renderAllowanceTypes();
@@ -4515,12 +4624,17 @@ document.querySelectorAll(".attendance-view-type").forEach((select) => {
 document.querySelector("#attendanceTable")?.addEventListener("change",event=>{if(event.target.matches(".attendance-mark-editor")) saveAttendanceOverride(event.target);});
 document.querySelector("#cargoAttendanceTable")?.addEventListener("change",event=>{if(event.target.matches(".attendance-mark-editor")) saveAttendanceOverride(event.target);});
 els.fuelForm?.addEventListener("submit", saveFuelRecord);
+els.fuelImportTemplateButton?.addEventListener("click", downloadFuelImportTemplate);
+els.fuelImportButton?.addEventListener("click", () => els.fuelImportInput?.click());
+els.fuelImportInput?.addEventListener("change", () => importFuelExcel(els.fuelImportInput.files?.[0]));
 els.fuelDriver?.addEventListener("change", () => { updateFuelPlate(); applyFuelFormDefaults(els.fuelDriver.value); updateFuelOdometerReference({ clearDistanceWhenMissing: true }); });
+els.fuelPlate?.addEventListener("change", () => updateFuelOdometerReference({ clearDistanceWhenMissing: true }));
 els.fuelDate?.addEventListener("change", () => updateFuelOdometerReference({ clearDistanceWhenMissing: true }));
 els.fuelOdometer?.addEventListener("input", () => updateFuelOdometerReference());
 els.fuelLiters?.addEventListener("input", updateFuelAmount);
 els.fuelPrice?.addEventListener("input", updateFuelAmount);
 els.fuelCancelButton?.addEventListener("click", resetFuelForm);
+els.fuelDriverSearch?.addEventListener("input", renderFuelRecords);
 els.fuelTable?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -4557,6 +4671,7 @@ els.carWashTable?.addEventListener("click", (event) => {
 resetCarWashForm();
 document.querySelector("#driverSalaryForm")?.addEventListener("submit",saveDriverSalary);
 document.querySelector("#driverSalaryTable")?.addEventListener("click",manageSalaryRow);
+document.querySelector("#driverSalarySearch")?.addEventListener("input",event=>{state.filters.driverSalary=event.target.value;renderDriverSalaries();});
 document.querySelector("#openSalaryDialog")?.addEventListener("click",openSalaryDialogForCreate);
 document.querySelector("#closeSalaryDialog")?.addEventListener("click",closeSalaryDialog);
 document.querySelector("#cancelSalaryDialog")?.addEventListener("click",closeSalaryDialog);
@@ -4618,11 +4733,11 @@ function renderPayroll() {
   const orderedDeductionTypes=orderDeductionTypes(deductionTypes);
   const allowanceAmount=(row,type)=>salaryAllowancesForRow(row).filter(item=>(String(item.type||"Khác").trim()||"Khác")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
   const deductionAmount=(row,type)=>(row.deductions||[]).filter(item=>(String(item.type||"Khoản trừ").trim()||"Khoản trừ")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
-  const columns=["STT","Mã NV","Họ và tên","Công chuẩn","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ","Ghi chú",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công",...(isCargo?[]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Thao tác"];
+  const columns=["STT","Mã NV","Họ và tên","Công chuẩn","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ","Ghi chú",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?[]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Thao tác"];
   head.innerHTML=`<tr>${columns.map(label=>`<th>${escapeHtml(label)}</th>`).join("")}</tr>`;
-  body.innerHTML=rows.map((row,index)=>`<tr class="payroll-driver-row" data-code="${escapeHtml(row.employeeCode)}"><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button payroll-driver-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td>${row.requiredDays}</td><td><strong>${row.workDays}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell"><input class="payroll-deduction-input" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" data-type="${escapeHtml(type)}" value="${escapeHtml(deductionAmount(row,type)?formatMoney(deductionAmount(row,type)):"")}" placeholder="0" inputmode="numeric" ${payload.locked?"disabled":""} aria-label="${escapeHtml(type)} của ${escapeHtml(row.employeeName)}" /></td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td><td class="payroll-note-cell"><input class="payroll-note-input" data-code="${escapeHtml(row.employeeCode)}" value="${escapeHtml(row.payrollNote||"")}" placeholder="Ghi chú (nếu là Khác)..." maxlength="500" ${payload.locked?"disabled":""} aria-label="Ghi chú của ${escapeHtml(row.employeeName)}" /></td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td>${isCargo?"":`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td>${row.salaryDeclared?"":`<button class="small payroll-declare-salary" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" type="button">Khai báo ngay</button>`}</td></tr>`).join("")||`<tr><td colspan="${columns.length}" class="empty">Không có dữ liệu tài xế trong tháng này.</td></tr>`;
-  const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0),deductionTotal=rows.reduce((sum,row)=>sum+salaryNumber(row.totalDeduction),0),bonus=formatMoney(payload.bonusAmount||0),revenueBonus=formatMoney(payload.travelRevenueBonusTotal||0),fuelBonus=formatMoney(payload.fuelSavingBonusTotal||0),fuelCharge=formatMoney(payload.fuelOveruseChargeTotal||0);
-  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Công chuẩn ${payload.requiredDays||0} ngày · Thưởng đủ công ${bonus}${isCargo?"":` · Thưởng doanh thu ${payload.travelRevenueBonusRate||10}% ${revenueBonus} · Thưởng tiết kiệm xăng ${fuelBonus} · Thu vượt định mức ${fuelCharge}`} · Khoản trừ ${formatMoney(deductionTotal)} · ${rows.length} tài xế · Tổng lương ${formatMoney(total)}${payload.locked ? " · ĐÃ CHỐT LƯƠNG" : ""}`;
+  body.innerHTML=rows.map((row,index)=>`<tr class="payroll-driver-row" data-code="${escapeHtml(row.employeeCode)}"><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button payroll-driver-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td>${row.requiredDays}</td><td><strong>${row.workDays}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell"><input class="payroll-deduction-input" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" data-type="${escapeHtml(type)}" value="${escapeHtml(deductionAmount(row,type)?formatMoney(deductionAmount(row,type)):"")}" placeholder="0" inputmode="numeric" ${payload.locked?"disabled":""} aria-label="${escapeHtml(type)} của ${escapeHtml(row.employeeName)}" /></td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td><td class="payroll-note-cell"><input class="payroll-note-input" data-code="${escapeHtml(row.employeeCode)}" value="${escapeHtml(row.payrollNote||"")}" placeholder="Ghi chú (nếu là Khác)..." maxlength="500" ${payload.locked?"disabled":""} aria-label="Ghi chú của ${escapeHtml(row.employeeName)}" /></td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?"":`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td>${row.salaryDeclared?"":`<button class="small payroll-declare-salary" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" type="button">Khai báo ngay</button>`}</td></tr>`).join("")||`<tr><td colspan="${columns.length}" class="empty">Không có dữ liệu tài xế trong tháng này.</td></tr>`;
+  const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0),deductionTotal=rows.reduce((sum,row)=>sum+salaryNumber(row.totalDeduction),0),bonus=formatMoney(payload.bonusAmount||0),holidayBonus=formatMoney(payload.holidayBonusTotal||0),revenueBonus=formatMoney(payload.travelRevenueBonusTotal||0),fuelBonus=formatMoney(payload.fuelSavingBonusTotal||0),fuelCharge=formatMoney(payload.fuelOveruseChargeTotal||0);
+  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Công chuẩn ${payload.requiredDays||0} ngày · Thưởng đủ công ${bonus} · ${payload.holidays?.length||0} ngày lễ · Thưởng ngày lễ ${holidayBonus}${isCargo?"":` · Thưởng doanh thu ${payload.travelRevenueBonusRate||10}% ${revenueBonus} · Thưởng tiết kiệm xăng ${fuelBonus} · Thu vượt định mức ${fuelCharge}`} · Khoản trừ ${formatMoney(deductionTotal)} · ${rows.length} tài xế · Tổng lương ${formatMoney(total)}${payload.locked ? " · ĐÃ CHỐT LƯƠNG" : ""}`;
 }
 
 async function saveInlinePayrollDeduction(input) {
@@ -4703,6 +4818,61 @@ async function loadPayroll(useSelected=true) {
   catch(error) { document.querySelector("#payrollSummary").textContent=error.message||"Không thể tải bảng lương."; }
 }
 
+function payrollHolidayDisplayDate(value) {
+  const parts=String(value||"").slice(0,10).split("-");
+  return parts.length===3?`${parts[2]}/${parts[1]}/${parts[0]}`:String(value||"");
+}
+
+function renderPayrollHolidays() {
+  const payload=state.payrollHolidays||{},rows=payload.rows||[],body=document.querySelector("#payrollHolidayTableBody"),summary=document.querySelector("#payrollHolidaySummary"),submit=document.querySelector("#payrollHolidaySubmit");
+  if(!body||!summary)return;
+  body.innerHTML=rows.map((row,index)=>`<tr><td>${index+1}</td><td><strong>${escapeHtml(payrollHolidayDisplayDate(row.date))}</strong></td><td>${escapeHtml(row.name||"Ngày lễ")}</td><td>${escapeHtml(row.updatedBy||"")}</td><td>${payload.locked?`<span class="muted">Tháng đã chốt</span>`:`<button class="small danger payroll-holiday-delete" data-id="${escapeHtml(row.id||"")}" data-date="${escapeHtml(row.date||"")}" type="button">Xóa</button>`}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">Chưa khai báo ngày lễ trong tháng này.</td></tr>`;
+  summary.textContent=`Tháng ${payload.month||""} · ${rows.length} ngày lễ${payload.locked?" · ĐÃ KHÓA DO BẢNG LƯƠNG ĐÃ CHỐT":" · Áp dụng chung cho Travel và Xe Hàng"}`;
+  if(submit)submit.disabled=Boolean(payload.locked);
+  const dateInput=document.querySelector("#payrollHolidayDate"),nameInput=document.querySelector("#payrollHolidayName");
+  if(dateInput)dateInput.disabled=Boolean(payload.locked);
+  if(nameInput)nameInput.disabled=Boolean(payload.locked);
+}
+
+async function loadPayrollHolidays(month) {
+  const selectedMonth=month||document.querySelector("#payrollMonth")?.value||localMonthForInput();
+  const summary=document.querySelector("#payrollHolidaySummary");
+  if(summary)summary.textContent="Đang tải danh mục ngày lễ...";
+  try { state.payrollHolidays=await fetchJson(`/api/proxy/accounting/payroll-holidays?month=${encodeURIComponent(selectedMonth)}`,{},90000); renderPayrollHolidays(); }
+  catch(error) { if(summary)summary.textContent=error.message||"Không thể tải danh mục ngày lễ."; }
+}
+
+async function openPayrollHolidayDialog() {
+  const month=document.querySelector("#payrollMonth")?.value||localMonthForInput(),dialog=document.querySelector("#payrollHolidayDialog"),dateInput=document.querySelector("#payrollHolidayDate"),nameInput=document.querySelector("#payrollHolidayName"),status=document.querySelector("#payrollHolidayFormStatus");
+  if(dateInput){const today=localDateForInput();dateInput.value=today.startsWith(`${month}-`)?today:`${month}-01`;dateInput.min=`${month}-01`;const [year,monthNumber]=month.split("-").map(Number);dateInput.max=new Date(Date.UTC(year,monthNumber,0)).toISOString().slice(0,10);}
+  if(nameInput)nameInput.value="";
+  if(status)status.textContent="";
+  dialog?.showModal();
+  await loadPayrollHolidays(month);
+}
+
+function closePayrollHolidayDialog() { document.querySelector("#payrollHolidayDialog")?.close(); }
+
+async function savePayrollHoliday(event) {
+  event.preventDefault();
+  const date=document.querySelector("#payrollHolidayDate")?.value||"",name=document.querySelector("#payrollHolidayName")?.value.trim()||"",month=state.payrollHolidays?.month||document.querySelector("#payrollMonth")?.value||localMonthForInput(),status=document.querySelector("#payrollHolidayFormStatus"),submit=document.querySelector("#payrollHolidaySubmit");
+  if(!date||!name)return;
+  if(!date.startsWith(`${month}-`)){if(status)status.textContent="Ngày lễ phải nằm trong tháng đang xem.";return;}
+  if(submit)submit.disabled=true;
+  if(status)status.textContent="Đang lưu...";
+  try { await fetchJson("/api/proxy/accounting/payroll-holidays",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({date,name})},90000); if(status)status.textContent="Đã lưu ngày lễ."; document.querySelector("#payrollHolidayName").value=""; await Promise.all([loadPayrollHolidays(month),loadPayroll(true)]); }
+  catch(error) { if(status)status.textContent=error.message||"Không thể lưu ngày lễ."; }
+  finally { if(submit)submit.disabled=Boolean(state.payrollHolidays?.locked); }
+}
+
+async function deletePayrollHoliday(button) {
+  const id=button.dataset.id||"",date=button.dataset.date||"",month=state.payrollHolidays?.month||"";
+  if(!id||!confirm(`Xóa ngày lễ ${payrollHolidayDisplayDate(date)}?`))return;
+  button.disabled=true;
+  try { await fetchJson(`/api/proxy/accounting/payroll-holidays/${encodeURIComponent(id)}`,{method:"DELETE"},90000); await Promise.all([loadPayrollHolidays(month),loadPayroll(true)]); }
+  catch(error) { button.disabled=false; alert(error.message||"Không thể xóa ngày lễ."); }
+}
+
 function closedPayrollBankCode(bankName) {
   const value=normalize(bankName);
   const codes=[["vietcombank","VCB"],["vietinbank","ICB"],["vietcombank","VCB"],["bidv","BIDV"],["agribank","AGRIBANK"],["techcombank","TCB"],["mbbank","MB"],["quan doi","MB"],["vpbank","VPB"],["acb","ACB"],["tpbank","TPB"],["sacombank","STB"],["hdbank","HDB"],["ocb","OCB"],["shb","SHB"],["msb","MSB"]];
@@ -4728,7 +4898,7 @@ function openClosedPayrollDetail(code) {
   const deductions=Array.isArray(row.deductions)?row.deductions:[];
   content.innerHTML=`<div class="payroll-detail-layout"><div class="payroll-detail-info">
     <div class="payroll-detail-identity"><strong>${escapeHtml(row.employeeName||"")}</strong><span>${escapeHtml(row.employeeCode||"")} · ${payload.viewType==="cargo"?"Xe Hàng":"Lái xe Travel"}</span></div>
-    <div class="payroll-detail-grid">${detail("Tháng",payload.month)}${detail("Công thực tế",row.workDays||0)}${detail("Lương cơ bản",formatMoney(row.baseSalary),"money")}${detail("Tổng phụ cấp",formatMoney(row.totalAllowance),"money")}${detail("Tổng khoản trừ",formatMoney(row.totalDeduction),"money")}${payload.viewType==="cargo"?`${detail("Giờ tăng ca",payrollOvertimeText(row.overtimeMinutes))}${detail("Tiền tăng ca",formatMoney(row.overtimePay),"money")}`:""}${detail("Thưởng đủ công",formatMoney(row.attendanceBonus),"money")}${payload.viewType!=="cargo"?`${detail("Doanh thu tháng",formatMoney(row.travelRevenue),"money")}${detail("Thưởng doanh thu 10%",formatMoney(row.travelRevenueBonus),"money")}${detail("Thưởng tiết kiệm xăng",formatMoney(row.fuelSavingBonus),"money")}${detail("Thu vượt định mức",formatMoney(row.fuelOveruseCharge),"money")}`:""}${detail("Tổng lương",formatMoney(row.totalSalary),"money")}</div>
+    <div class="payroll-detail-grid">${detail("Tháng",payload.month)}${detail("Công thực tế",row.workDays||0)}${detail("Lương cơ bản",formatMoney(row.baseSalary),"money")}${detail("Tổng phụ cấp",formatMoney(row.totalAllowance),"money")}${detail("Tổng khoản trừ",formatMoney(row.totalDeduction),"money")}${payload.viewType==="cargo"?`${detail("Giờ tăng ca",payrollOvertimeText(row.overtimeMinutes))}${detail("Tiền tăng ca",formatMoney(row.overtimePay),"money")}`:""}${detail("Thưởng đủ công",formatMoney(row.attendanceBonus),"money")}${detail("Ngày lễ đi làm",row.holidayWorkDays||0)}${detail("Thưởng ngày lễ",formatMoney(row.holidayBonus),"money")}${payload.viewType!=="cargo"?`${detail("Doanh thu tháng",formatMoney(row.travelRevenue),"money")}${detail("Thưởng doanh thu 10%",formatMoney(row.travelRevenueBonus),"money")}${detail("Thưởng tiết kiệm xăng",formatMoney(row.fuelSavingBonus),"money")}${detail("Thu vượt định mức",formatMoney(row.fuelOveruseCharge),"money")}`:""}${detail("Tổng lương",formatMoney(row.totalSalary),"money")}</div>
     <h3>Các khoản phụ cấp</h3><div class="payroll-detail-allowances">${allowances.length?allowances.map(item=>`<div><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join(""):"<span class=\"muted\">Không có phụ cấp</span>"}</div>
     <h3>Các khoản trừ</h3><div class="payroll-detail-allowances payroll-detail-deductions">${deductions.length?deductions.map(item=>`<div><span>${escapeHtml(item.type||"Khoản trừ")}${item.note?`<small class=\"muted\">${escapeHtml(item.note)}</small>`:""}</span><strong>${formatMoney(item.amount)}</strong></div>`).join(""):"<span class=\"muted\">Không có khoản trừ</span>"}</div>
     <h3>Thông tin nhận lương</h3><div class="payroll-detail-grid">${detail("Ngân hàng",row.bankName)}${detail("Số tài khoản",row.accountNumber)}${detail("Chủ tài khoản",row.accountHolder)}${detail("Trạng thái",transferred?"Đã chuyển lương":"Chưa chuyển")}${transferred?detail("Người xác nhận",row.transferredBy||""):""}${transferred?detail("Thời gian",row.transferredAt?new Date(row.transferredAt).toLocaleString("vi-VN"):""):""}</div>
@@ -4758,17 +4928,17 @@ function renderClosedPayroll() {
   [...knownDeductionTypes,...rows.flatMap(row=>(row.deductions||[]).map(item=>String(item.type||"Khoản trừ").trim()||"Khoản trừ"))].forEach(type=>{if(type&&!deductionTypes.includes(type))deductionTypes.push(type);});
   const orderedDeductionTypes=orderDeductionTypes(deductionTypes);
   const deductionAmount=(row,type)=>(row.deductions||[]).filter(item=>(String(item.type||"Khoản trừ").trim()||"Khoản trừ")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
-  const columns=["STT","Mã NV","Họ và tên","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công",...(isCargo?[]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Ghi chú","Ngân hàng","Số tài khoản","QR nhận lương","Trạng thái chuyển","Người xác nhận","Thao tác"];
+  const columns=["STT","Mã NV","Họ và tên","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?[]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Ghi chú","Ngân hàng","Số tài khoản","QR nhận lương","Trạng thái chuyển","Người xác nhận","Thao tác"];
   head.innerHTML=`<tr>${columns.map(label=>`<th>${escapeHtml(label)}</th>`).join("")}</tr>`;
   body.innerHTML=rows.map((row,index)=>{
     const qr=closedPayrollQrUrl(row,payload.month);
     const transferred=row.remittanceStatus==="transferred";
     const transferredAt=row.transferredAt?new Date(row.transferredAt).toLocaleString("vi-VN"):"";
-    return `<tr><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td><strong>${row.workDays||0}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell">${formatMoney(deductionAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td>${isCargo?"":`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td class="payroll-note-cell">${escapeHtml(row.payrollNote||"")}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${qr?`<img class="payroll-qr" src="${escapeHtml(qr)}" alt="QR nhận lương ${escapeHtml(row.employeeName)}" loading="lazy" />`:`<span class="muted">Chưa đủ thông tin</span>`}</td><td>${transferred?`<span class="payroll-transfer-status done">Đã chuyển</span>`:`<span class="payroll-transfer-status pending">Chưa chuyển</span>`}</td><td>${escapeHtml(row.transferredBy||"")}<small class="muted">${escapeHtml(transferredAt)}</small></td><td><div class="row-actions"><button class="small secondary closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">Chi tiết</button>${transferred?`<span class="muted">Đã xác nhận</span>`:`<button class="small closed-payroll-transfer" data-code="${escapeHtml(row.employeeCode)}" type="button">Đã chuyển lương</button>`}</div></td></tr>`;
+    return `<tr><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td><strong>${row.workDays||0}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell">${formatMoney(deductionAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?"":`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td class="payroll-note-cell">${escapeHtml(row.payrollNote||"")}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${qr?`<img class="payroll-qr" src="${escapeHtml(qr)}" alt="QR nhận lương ${escapeHtml(row.employeeName)}" loading="lazy" />`:`<span class="muted">Chưa đủ thông tin</span>`}</td><td>${transferred?`<span class="payroll-transfer-status done">Đã chuyển</span>`:`<span class="payroll-transfer-status pending">Chưa chuyển</span>`}</td><td>${escapeHtml(row.transferredBy||"")}<small class="muted">${escapeHtml(transferredAt)}</small></td><td><div class="row-actions"><button class="small secondary closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">Chi tiết</button>${transferred?`<span class="muted">Đã xác nhận</span>`:`<button class="small closed-payroll-transfer" data-code="${escapeHtml(row.employeeCode)}" type="button">Đã chuyển lương</button>`}</div></td></tr>`;
   }).join("")||`<tr><td colspan="${columns.length}" class="empty">Bảng lương đã chốt chưa có dòng dữ liệu.</td></tr>`;
   const transferredCount=rows.filter(row=>row.remittanceStatus==="transferred").length;
   const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0);
-  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Tháng ${payload.month} · Chốt bởi ${payload.lockedBy||""} · ${rows.length} tài xế · Tổng lương ${formatMoney(total)} · Đã chuyển ${transferredCount}/${rows.length}`;
+  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Tháng ${payload.month} · Chốt bởi ${payload.lockedBy||""} · ${rows.length} tài xế · Thưởng ngày lễ ${formatMoney(payload.holidayBonusTotal||0)} · Tổng lương ${formatMoney(total)} · Đã chuyển ${transferredCount}/${rows.length}`;
 }
 
 async function loadClosedPayroll(useSelected=true) {
@@ -4830,6 +5000,10 @@ document.querySelector("#payrollMonth")?.addEventListener("change",()=>loadPayro
 document.querySelector("#payrollViewType")?.addEventListener("change",()=>loadPayroll(true));
 document.querySelector("#payrollExport")?.addEventListener("click",exportPayroll);
 document.querySelector("#payrollPayslipsZipExport")?.addEventListener("click",exportPayrollPayslipsZip);
+document.querySelector("#openPayrollHolidayDialog")?.addEventListener("click",openPayrollHolidayDialog);
+document.querySelector("#closePayrollHolidayDialog")?.addEventListener("click",closePayrollHolidayDialog);
+document.querySelector("#payrollHolidayForm")?.addEventListener("submit",savePayrollHoliday);
+document.querySelector("#payrollHolidayTableBody")?.addEventListener("click",event=>{const button=event.target.closest(".payroll-holiday-delete");if(button)deletePayrollHoliday(button);});
 document.querySelector("#payrollLockButton")?.addEventListener("click", async () => {
   const month = document.querySelector("#payrollMonth")?.value || localMonthForInput();
   const viewType = document.querySelector("#payrollViewType")?.value || "travel";
