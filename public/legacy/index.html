@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kế toán Đi Xanh</title>
-    <link rel="stylesheet" href="/legacy/styles.css?v=salary-search-20260920-1" />
+    <link rel="stylesheet" href="/legacy/styles.css?v=travel-holiday-rule-20260930-2" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen">
@@ -431,7 +431,7 @@
                   <strong id="orderSummaryDiscount">0 đ</strong>
                 </article>
                 <article class="order-quick-summary-card">
-                  <span>Doanh thu</span>
+                  <span>Doanh thu tính lương</span>
                   <strong id="orderSummaryAmountDue">0 đ</strong>
                 </article>
                 <article class="order-quick-summary-card">
@@ -480,7 +480,7 @@
                 <button id="attendanceRefreshButton" type="button">Tải bảng công</button>
               </div>
             </div>
-            <div class="attendance-legend"><span><i class="mark-x">X</i> Có đi làm (tính công)</span><span><i class="mark-o">O</i> Nghỉ có lương (không tính công)</span><span><i class="mark-kl">KL</i> Nghỉ không lương</span><span>Chỉ xem · đang tạm khóa chỉnh sửa</span><span id="attendanceLockStatus" class="attendance-lock-status"></span><span id="attendanceSummary">Đang chờ tải dữ liệu</span></div>
+            <div class="attendance-legend"><span><i class="mark-x">X</i> Có đi làm (tính công)</span><span><i class="mark-nl">NL</i> Ngày lễ có đi làm (tính công + thưởng)</span><span><i class="mark-o">O</i> Không đi làm (không tính công)</span><span><i class="mark-kl">KL</i> Nghỉ không lương</span><span>Chỉ xem · đang tạm khóa chỉnh sửa</span><span id="attendanceLockStatus" class="attendance-lock-status"></span><span id="attendanceSummary">Đang chờ tải dữ liệu</span></div>
             <div class="attendance-table-wrap">
               <table class="attendance-table" id="attendanceTable"></table>
             </div>
@@ -693,7 +693,7 @@
 
         <dialog id="payrollHolidayDialog" class="salary-dialog">
           <div class="dialog-panel salary-dialog-panel payroll-holiday-dialog-panel">
-            <div class="salary-dialog-title"><div><h2>Khai báo ngày lễ tính lương</h2><p>Áp dụng chung cho lái xe Travel và Xe Hàng. Chỉ tài xế có dấu công X trong ngày lễ mới được nhận thưởng.</p></div><button class="secondary small" id="closePayrollHolidayDialog" type="button">Đóng</button></div>
+            <div class="salary-dialog-title"><div><h2>Khai báo ngày lễ tính lương</h2><p>Ngày lễ có tính công hiển thị NL. Xe Hàng lên ca được thưởng lễ; xuống ca vẫn tính công và hiển thị NL nhưng không thưởng lễ.</p></div><button class="secondary small" id="closePayrollHolidayDialog" type="button">Đóng</button></div>
             <form id="payrollHolidayForm" class="payroll-holiday-form">
               <label class="required">Ngày lễ<input id="payrollHolidayDate" type="date" required /></label>
               <label class="required">Tên ngày lễ<input id="payrollHolidayName" type="text" maxlength="150" placeholder="Ví dụ: Quốc khánh" required /></label>
@@ -719,7 +719,7 @@
                 <button id="cargoAttendanceRefreshButton" type="button">Tải bảng công</button>
               </div>
             </div>
-            <div class="attendance-legend"><span><i class="mark-x">X</i> Có đi làm (tính công)</span><span><i class="mark-o">O</i> Nghỉ có lương (không tính công)</span><span><i class="mark-kl">KL</i> Nghỉ không lương</span><span>Chỉ xem · đang tạm khóa chỉnh sửa</span><span id="cargoAttendanceLockStatus" class="attendance-lock-status"></span><span id="cargoAttendanceSummary">Đang chờ tải dữ liệu</span></div>
+            <div class="attendance-legend"><span><i class="mark-x">X</i> Có đi làm (tính công)</span><span><i class="mark-nl">NL</i> Ngày lễ (tính công)</span><span><i class="mark-o">O</i> Nghỉ có lương (không tính công)</span><span><i class="mark-kl">KL</i> Nghỉ không lương</span><span>Chỉ xem · đang tạm khóa chỉnh sửa</span><span id="cargoAttendanceLockStatus" class="attendance-lock-status"></span><span id="cargoAttendanceSummary">Đang chờ tải dữ liệu</span></div>
             <div class="attendance-table-wrap">
               <table class="attendance-table" id="cargoAttendanceTable"></table>
             </div>
@@ -1935,6 +1935,7 @@
       </form>
     </dialog>
 
-  <script src="/legacy/app.js?v=salary-search-20260920-1" type="module"></script>
+  <script src="/legacy/app.js?v=order-payroll-revenue-20261001-1" type="module"></script>
   </body>
 </html>
+
