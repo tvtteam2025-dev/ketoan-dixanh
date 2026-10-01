@@ -1187,6 +1187,13 @@ function orderRevenueAmount(order) {
   return Math.max(parseMoney(order.giaTien) + parseMoney(order.phuThu) - parseMoney(order.giamGia) - parseMoney(order.tongUuDai), 0);
 }
 
+function orderPayrollRevenueAmount(order) {
+  return Math.max(
+    orderRevenueAmount(order) + parseMoney(order.uuDaiTinhDoanhThuLaiXe),
+    0,
+  );
+}
+
 function orderVatAmount(order) {
   return parseMoney(order.thueVAT);
 }
@@ -4412,6 +4419,13 @@ function isCargoVan(row) {
   return normalize(row?.so_cho).replace(/\s+/g, "").includes("taivan945kg");
 }
 
+function travelAttendanceMark(status) {
+  const normalizedStatus = normalize(status);
+  if (normalizedStatus.includes("len ca")) return "X";
+  if (normalizedStatus.includes("xuong ca")) return "O";
+  return "KL";
+}
+
 function attendanceOverride(payload, viewType, employeeCode, day, fallback) {
   return payload?.overrides?.[`${viewType}:${employeeCode}:${day}`]?.mark || fallback;
 }
@@ -4421,8 +4435,30 @@ function attendanceLockFor(payload, viewType) {
   return lock && (lock.status === "locked" || lock.locked === true) ? lock : null;
 }
 
+async function attendancePayloadForMonth(month) {
+  const payload = await fetchJson(`/api/proxy/accounting/attendance?month=${encodeURIComponent(month)}`, {}, 90000);
+  if (!Array.isArray(payload.holidays)) {
+    try {
+      const holidays = await fetchJson(`/api/proxy/accounting/payroll-holidays?month=${encodeURIComponent(month)}`, {}, 90000);
+      payload.holidays = holidays.rows || [];
+    } catch {
+      payload.holidays = [];
+    }
+  }
+  return payload;
+}
+
+function attendanceHolidayForDay(payload, day) {
+  const month = String(payload?.month || "").slice(0, 7);
+  if (!month || !Number.isInteger(Number(day))) return null;
+  const date = `${month}-${String(day).padStart(2, "0")}`;
+  return (payload?.holidays || []).find((holiday) => String(holiday?.date || "").slice(0, 10) === date) || null;
+}
+
 function attendanceMarkCell(value, originalValue, viewType, employeeCode, day, payload) {
-  const label = value === "X" ? "Có đi làm" : value === "O" ? "Nghỉ có lương" : "Nghỉ không lương";
+  const holiday = attendanceHolidayForDay(payload, day);
+  const displayValue = value === "X" && holiday ? "NL" : value;
+  const label = displayValue === "NL" ? `Ngày lễ: ${holiday?.name || "Ngày lễ"} (có đi làm, được tính công và thưởng)` : value === "X" ? "Có đi làm" : value === "O" ? "Không đi làm (không tính công)" : "Nghỉ không lương";
   const override = payload?.overrides?.[`${viewType}:${employeeCode}:${day}`];
   const lock = attendanceLockFor(payload, viewType);
   const editingPaused = !ATTENDANCE_EDITING_ENABLED || payload?.editingEnabled === false;
@@ -4430,10 +4466,11 @@ function attendanceMarkCell(value, originalValue, viewType, employeeCode, day, p
   const editedAtValue = String(override?.updatedAt || "").trim();
   const editedAtDate = editedAtValue ? new Date(editedAtValue) : null;
   const editedAt = editedAtDate && !Number.isNaN(editedAtDate.getTime()) ? editedAtDate.toLocaleString("vi-VN") : editedAtValue;
-  const title = editingPaused ? "Chức năng thay đổi dấu công đang tạm khóa." : lock ? `Bảng lương đã chốt${lock.lockedBy ? ` bởi ${lock.lockedBy}` : ""}${lock.lockedAt ? ` lúc ${new Date(lock.lockedAt).toLocaleString("vi-VN")}` : ""}` : override ? `Ký hiệu gốc: ${originalValue} → Hiện tại: ${value} · Đã sửa bởi ${editedBy || "Kế toán"}${editedAt ? ` lúc ${editedAt}` : ""}` : `Ký hiệu gốc: ${originalValue} · Dữ liệu tự động · Bấm để sửa`;
-  const markClass = value === "O" ? "off" : value === "KL" ? "unpaid" : "on";
+  const editTitle = editingPaused ? "Chức năng thay đổi dấu công đang tạm khóa." : lock ? `Bảng lương đã chốt${lock.lockedBy ? ` bởi ${lock.lockedBy}` : ""}${lock.lockedAt ? ` lúc ${new Date(lock.lockedAt).toLocaleString("vi-VN")}` : ""}` : override ? `Ký hiệu gốc: ${originalValue} → Hiện tại: ${value} · Đã sửa bởi ${editedBy || "Kế toán"}${editedAt ? ` lúc ${editedAt}` : ""}` : `Ký hiệu gốc: ${originalValue} · Dữ liệu tự động · Bấm để sửa`;
+  const title = holiday && value === "X" ? `${holiday.name || "Ngày lễ"} · NL vẫn được tính 1 ngày công. ${editTitle}` : editTitle;
+  const markClass = displayValue === "NL" ? "holiday" : value === "O" ? "off" : value === "KL" ? "unpaid" : "on";
   const disabled = lock || editingPaused;
-  return `<td class="attendance-mark ${markClass}${override ? " manually-edited" : ""}${lock ? " attendance-locked" : ""}${editingPaused ? " attendance-editing-paused" : ""}" title="${escapeHtml(title)}"><select class="attendance-mark-editor" data-attendance-view="${viewType}" data-employee-code="${escapeHtml(employeeCode)}" data-day="${day}" aria-label="Ngày ${day}: ${label}"${disabled ? " disabled" : ""}><option value="X"${value === "X" ? " selected" : ""}>X</option><option value="O"${value === "O" ? " selected" : ""}>O</option><option value="KL"${value === "KL" ? " selected" : ""}>KL</option></select></td>`;
+  return `<td class="attendance-mark ${markClass}${override ? " manually-edited" : ""}${lock ? " attendance-locked" : ""}${editingPaused ? " attendance-editing-paused" : ""}" title="${escapeHtml(title)}"><select class="attendance-mark-editor" data-attendance-view="${viewType}" data-employee-code="${escapeHtml(employeeCode)}" data-day="${day}" aria-label="Ngày ${day}: ${escapeHtml(label)}"${disabled ? " disabled" : ""}><option value="X"${value === "X" ? " selected" : ""}>${displayValue === "NL" ? "NL" : "X"}</option><option value="O"${value === "O" ? " selected" : ""}>O</option><option value="KL"${value === "KL" ? " selected" : ""}>KL</option></select></td>`;
 }
 
 function attendanceRows() {
@@ -4453,7 +4490,8 @@ function attendanceRows() {
     rosterNames.set(code, name);
     if (row.khuVucHoatDong) rosterBranches.set(code, String(row.khuVucHoatDong).trim());
     const key = `${code}:${date.getDate()}`;
-    events.set(key, normalize(row.trangThaiLenXuongCa).includes("xuong ca") ? "O" : "X");
+    const mark = travelAttendanceMark(row.trangThaiLenXuongCa);
+    if (mark === "X" || !events.has(key)) events.set(key, mark);
   }
   const codes = new Set(rosterNames.keys());
   return [...codes].map(code => {
@@ -4486,7 +4524,7 @@ async function loadAttendance(useSelectedMonth = true) {
   const month = useSelectedMonth ? input.value : (state.attendance.month || input.value);
   document.querySelector("#attendanceSummary").textContent = "Đang tổng hợp dữ liệu...";
   try {
-    const payload = await fetchJson(`/api/proxy/accounting/attendance?month=${encodeURIComponent(month)}`, {}, 90000);
+    const payload = await attendancePayloadForMonth(month);
     state.attendance = payload;
     renderAttendance();
   } catch (error) {
@@ -4514,8 +4552,13 @@ function cargoAttendanceRows() {
     const name = String(row.hoTenMSNVLaiXe || "").replace(/\s*-\s*[A-Za-z]{2}\d+\s*$/, "").trim();
     drivers.set(code, { name, branch: String(row.khuVucHoatDong || "").trim() });
     const key = `${code}:${date.getDate()}`;
-    if (normalize(row.trangThaiLenXuongCa).includes("len ca")) events.set(key, "X");
-    else if (!events.has(key)) events.set(key, "KL");
+    const status = normalize(row.trangThaiLenXuongCa);
+    const isHoliday = Boolean(attendanceHolidayForDay(state.cargoAttendance, date.getDate()));
+    if (status.includes("len ca")) {
+      events.set(key, "X");
+    } else if (isHoliday && status.includes("xuong ca")) {
+      if (!events.has(key)) events.set(key, "X");
+    } else if (!events.has(key)) events.set(key, "KL");
   }
   return [...drivers].map(([code, driver]) => {
     const originalDays = Array.from({length:dayCount},(_,index)=>events.get(`${code}:${index+1}`) || "KL");
@@ -4568,7 +4611,7 @@ async function loadCargoAttendance(useSelectedMonth=true) {
   if(!input.value) input.value=localMonthForInput();
   const month=useSelectedMonth?input.value:(state.cargoAttendance.month||input.value);
   document.querySelector("#cargoAttendanceSummary").textContent="Đang tổng hợp dữ liệu...";
-  try { state.cargoAttendance=await fetchJson(`/api/proxy/accounting/attendance?month=${encodeURIComponent(month)}`,{},90000); renderCargoAttendance(); }
+  try { state.cargoAttendance=await attendancePayloadForMonth(month); renderCargoAttendance(); }
   catch(error){ document.querySelector("#cargoAttendanceSummary").textContent=error.message||"Không thể tải bảng chấm công xe hàng."; }
 }
 
@@ -4733,11 +4776,11 @@ function renderPayroll() {
   const orderedDeductionTypes=orderDeductionTypes(deductionTypes);
   const allowanceAmount=(row,type)=>salaryAllowancesForRow(row).filter(item=>(String(item.type||"Khác").trim()||"Khác")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
   const deductionAmount=(row,type)=>(row.deductions||[]).filter(item=>(String(item.type||"Khoản trừ").trim()||"Khoản trừ")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
-  const columns=["STT","Mã NV","Họ và tên","Công chuẩn","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ","Ghi chú",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?[]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Thao tác"];
+  const columns=["STT","Mã NV","Họ và tên","Công chuẩn","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ","Ghi chú",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?["Số ngày còn phép trong tháng","Tiền thưởng ngày công tăng ca"]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Thao tác"];
   head.innerHTML=`<tr>${columns.map(label=>`<th>${escapeHtml(label)}</th>`).join("")}</tr>`;
-  body.innerHTML=rows.map((row,index)=>`<tr class="payroll-driver-row" data-code="${escapeHtml(row.employeeCode)}"><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button payroll-driver-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td>${row.requiredDays}</td><td><strong>${row.workDays}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell"><input class="payroll-deduction-input" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" data-type="${escapeHtml(type)}" value="${escapeHtml(deductionAmount(row,type)?formatMoney(deductionAmount(row,type)):"")}" placeholder="0" inputmode="numeric" ${payload.locked?"disabled":""} aria-label="${escapeHtml(type)} của ${escapeHtml(row.employeeName)}" /></td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td><td class="payroll-note-cell"><input class="payroll-note-input" data-code="${escapeHtml(row.employeeCode)}" value="${escapeHtml(row.payrollNote||"")}" placeholder="Ghi chú (nếu là Khác)..." maxlength="500" ${payload.locked?"disabled":""} aria-label="Ghi chú của ${escapeHtml(row.employeeName)}" /></td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?"":`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td>${row.salaryDeclared?"":`<button class="small payroll-declare-salary" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" type="button">Khai báo ngay</button>`}</td></tr>`).join("")||`<tr><td colspan="${columns.length}" class="empty">Không có dữ liệu tài xế trong tháng này.</td></tr>`;
-  const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0),deductionTotal=rows.reduce((sum,row)=>sum+salaryNumber(row.totalDeduction),0),bonus=formatMoney(payload.bonusAmount||0),holidayBonus=formatMoney(payload.holidayBonusTotal||0),revenueBonus=formatMoney(payload.travelRevenueBonusTotal||0),fuelBonus=formatMoney(payload.fuelSavingBonusTotal||0),fuelCharge=formatMoney(payload.fuelOveruseChargeTotal||0);
-  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Công chuẩn ${payload.requiredDays||0} ngày · Thưởng đủ công ${bonus} · ${payload.holidays?.length||0} ngày lễ · Thưởng ngày lễ ${holidayBonus}${isCargo?"":` · Thưởng doanh thu ${payload.travelRevenueBonusRate||10}% ${revenueBonus} · Thưởng tiết kiệm xăng ${fuelBonus} · Thu vượt định mức ${fuelCharge}`} · Khoản trừ ${formatMoney(deductionTotal)} · ${rows.length} tài xế · Tổng lương ${formatMoney(total)}${payload.locked ? " · ĐÃ CHỐT LƯƠNG" : ""}`;
+  body.innerHTML=rows.map((row,index)=>`<tr class="payroll-driver-row" data-code="${escapeHtml(row.employeeCode)}"><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button payroll-driver-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td>${row.requiredDays}</td><td><strong>${row.workDays}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell"><input class="payroll-deduction-input" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" data-type="${escapeHtml(type)}" value="${escapeHtml(deductionAmount(row,type)?formatMoney(deductionAmount(row,type)):"")}" placeholder="0" inputmode="numeric" ${payload.locked?"disabled":""} aria-label="${escapeHtml(type)} của ${escapeHtml(row.employeeName)}" /></td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td><td class="payroll-note-cell"><input class="payroll-note-input" data-code="${escapeHtml(row.employeeCode)}" value="${escapeHtml(row.payrollNote||"")}" placeholder="Ghi chú (nếu là Khác)..." maxlength="500" ${payload.locked?"disabled":""} aria-label="Ghi chú của ${escapeHtml(row.employeeName)}" /></td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?`<td><strong>${row.remainingLeaveDays||0}</strong></td><td class="money">${formatMoney(row.extraWorkdayBonus)}</td>`:`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td>${row.salaryDeclared?"":`<button class="small payroll-declare-salary" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" type="button">Khai báo ngay</button>`}</td></tr>`).join("")||`<tr><td colspan="${columns.length}" class="empty">Không có dữ liệu tài xế trong tháng này.</td></tr>`;
+  const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0),deductionTotal=rows.reduce((sum,row)=>sum+salaryNumber(row.totalDeduction),0),bonus=formatMoney(payload.bonusAmount||0),holidayBonus=formatMoney(payload.holidayBonusTotal||0),extraWorkdayBonus=formatMoney(payload.extraWorkdayBonusTotal||0),revenueBonus=formatMoney(payload.travelRevenueBonusTotal||0),fuelBonus=formatMoney(payload.fuelSavingBonusTotal||0),fuelCharge=formatMoney(payload.fuelOveruseChargeTotal||0);
+  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Công chuẩn ${payload.requiredDays||0} ngày · ${isCargo?"Thưởng đủ công theo chức vụ":`Thưởng đủ công ${bonus}`} · ${payload.holidays?.length||0} ngày lễ · Thưởng ngày lễ ${holidayBonus}${isCargo?` · Thưởng ngày công tăng ca ${extraWorkdayBonus}`:` · Thưởng doanh thu ${payload.travelRevenueBonusRate||10}% ${revenueBonus} · Thưởng tiết kiệm xăng ${fuelBonus} · Thu vượt định mức ${fuelCharge}`} · Khoản trừ ${formatMoney(deductionTotal)} · ${rows.length} tài xế · Tổng lương ${formatMoney(total)}${payload.locked ? " · ĐÃ CHỐT LƯƠNG" : ""}`;
 }
 
 async function saveInlinePayrollDeduction(input) {
@@ -4898,7 +4941,7 @@ function openClosedPayrollDetail(code) {
   const deductions=Array.isArray(row.deductions)?row.deductions:[];
   content.innerHTML=`<div class="payroll-detail-layout"><div class="payroll-detail-info">
     <div class="payroll-detail-identity"><strong>${escapeHtml(row.employeeName||"")}</strong><span>${escapeHtml(row.employeeCode||"")} · ${payload.viewType==="cargo"?"Xe Hàng":"Lái xe Travel"}</span></div>
-    <div class="payroll-detail-grid">${detail("Tháng",payload.month)}${detail("Công thực tế",row.workDays||0)}${detail("Lương cơ bản",formatMoney(row.baseSalary),"money")}${detail("Tổng phụ cấp",formatMoney(row.totalAllowance),"money")}${detail("Tổng khoản trừ",formatMoney(row.totalDeduction),"money")}${payload.viewType==="cargo"?`${detail("Giờ tăng ca",payrollOvertimeText(row.overtimeMinutes))}${detail("Tiền tăng ca",formatMoney(row.overtimePay),"money")}`:""}${detail("Thưởng đủ công",formatMoney(row.attendanceBonus),"money")}${detail("Ngày lễ đi làm",row.holidayWorkDays||0)}${detail("Thưởng ngày lễ",formatMoney(row.holidayBonus),"money")}${payload.viewType!=="cargo"?`${detail("Doanh thu tháng",formatMoney(row.travelRevenue),"money")}${detail("Thưởng doanh thu 10%",formatMoney(row.travelRevenueBonus),"money")}${detail("Thưởng tiết kiệm xăng",formatMoney(row.fuelSavingBonus),"money")}${detail("Thu vượt định mức",formatMoney(row.fuelOveruseCharge),"money")}`:""}${detail("Tổng lương",formatMoney(row.totalSalary),"money")}</div>
+    <div class="payroll-detail-grid">${detail("Tháng",payload.month)}${detail("Công thực tế",row.workDays||0)}${detail("Lương cơ bản",formatMoney(row.baseSalary),"money")}${detail("Tổng phụ cấp",formatMoney(row.totalAllowance),"money")}${detail("Tổng khoản trừ",formatMoney(row.totalDeduction),"money")}${payload.viewType==="cargo"?`${detail("Giờ tăng ca",payrollOvertimeText(row.overtimeMinutes))}${detail("Tiền tăng ca",formatMoney(row.overtimePay),"money")}${detail("Số ngày còn phép trong tháng",row.remainingLeaveDays||0)}${detail("Tiền thưởng ngày công tăng ca",formatMoney(row.extraWorkdayBonus),"money")}`:""}${detail("Thưởng đủ công",formatMoney(row.attendanceBonus),"money")}${detail("Ngày lễ đi làm",row.holidayWorkDays||0)}${detail("Thưởng ngày lễ",formatMoney(row.holidayBonus),"money")}${payload.viewType!=="cargo"?`${detail("Doanh thu tháng",formatMoney(row.travelRevenue),"money")}${detail("Thưởng doanh thu 10%",formatMoney(row.travelRevenueBonus),"money")}${detail("Thưởng tiết kiệm xăng",formatMoney(row.fuelSavingBonus),"money")}${detail("Thu vượt định mức",formatMoney(row.fuelOveruseCharge),"money")}`:""}${detail("Tổng lương",formatMoney(row.totalSalary),"money")}</div>
     <h3>Các khoản phụ cấp</h3><div class="payroll-detail-allowances">${allowances.length?allowances.map(item=>`<div><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join(""):"<span class=\"muted\">Không có phụ cấp</span>"}</div>
     <h3>Các khoản trừ</h3><div class="payroll-detail-allowances payroll-detail-deductions">${deductions.length?deductions.map(item=>`<div><span>${escapeHtml(item.type||"Khoản trừ")}${item.note?`<small class=\"muted\">${escapeHtml(item.note)}</small>`:""}</span><strong>${formatMoney(item.amount)}</strong></div>`).join(""):"<span class=\"muted\">Không có khoản trừ</span>"}</div>
     <h3>Thông tin nhận lương</h3><div class="payroll-detail-grid">${detail("Ngân hàng",row.bankName)}${detail("Số tài khoản",row.accountNumber)}${detail("Chủ tài khoản",row.accountHolder)}${detail("Trạng thái",transferred?"Đã chuyển lương":"Chưa chuyển")}${transferred?detail("Người xác nhận",row.transferredBy||""):""}${transferred?detail("Thời gian",row.transferredAt?new Date(row.transferredAt).toLocaleString("vi-VN"):""):""}</div>
@@ -4928,17 +4971,17 @@ function renderClosedPayroll() {
   [...knownDeductionTypes,...rows.flatMap(row=>(row.deductions||[]).map(item=>String(item.type||"Khoản trừ").trim()||"Khoản trừ"))].forEach(type=>{if(type&&!deductionTypes.includes(type))deductionTypes.push(type);});
   const orderedDeductionTypes=orderDeductionTypes(deductionTypes);
   const deductionAmount=(row,type)=>(row.deductions||[]).filter(item=>(String(item.type||"Khoản trừ").trim()||"Khoản trừ")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
-  const columns=["STT","Mã NV","Họ và tên","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?[]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Ghi chú","Ngân hàng","Số tài khoản","QR nhận lương","Trạng thái chuyển","Người xác nhận","Thao tác"];
+  const columns=["STT","Mã NV","Họ và tên","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?["Số ngày còn phép trong tháng","Tiền thưởng ngày công tăng ca"]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Ghi chú","Ngân hàng","Số tài khoản","QR nhận lương","Trạng thái chuyển","Người xác nhận","Thao tác"];
   head.innerHTML=`<tr>${columns.map(label=>`<th>${escapeHtml(label)}</th>`).join("")}</tr>`;
   body.innerHTML=rows.map((row,index)=>{
     const qr=closedPayrollQrUrl(row,payload.month);
     const transferred=row.remittanceStatus==="transferred";
     const transferredAt=row.transferredAt?new Date(row.transferredAt).toLocaleString("vi-VN"):"";
-    return `<tr><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td><strong>${row.workDays||0}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell">${formatMoney(deductionAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?"":`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td class="payroll-note-cell">${escapeHtml(row.payrollNote||"")}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${qr?`<img class="payroll-qr" src="${escapeHtml(qr)}" alt="QR nhận lương ${escapeHtml(row.employeeName)}" loading="lazy" />`:`<span class="muted">Chưa đủ thông tin</span>`}</td><td>${transferred?`<span class="payroll-transfer-status done">Đã chuyển</span>`:`<span class="payroll-transfer-status pending">Chưa chuyển</span>`}</td><td>${escapeHtml(row.transferredBy||"")}<small class="muted">${escapeHtml(transferredAt)}</small></td><td><div class="row-actions"><button class="small secondary closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">Chi tiết</button>${transferred?`<span class="muted">Đã xác nhận</span>`:`<button class="small closed-payroll-transfer" data-code="${escapeHtml(row.employeeCode)}" type="button">Đã chuyển lương</button>`}</div></td></tr>`;
+    return `<tr><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td><strong>${row.workDays||0}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell">${formatMoney(deductionAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?`<td><strong>${row.remainingLeaveDays||0}</strong></td><td class="money">${formatMoney(row.extraWorkdayBonus)}</td>`:`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td class="payroll-note-cell">${escapeHtml(row.payrollNote||"")}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${qr?`<img class="payroll-qr" src="${escapeHtml(qr)}" alt="QR nhận lương ${escapeHtml(row.employeeName)}" loading="lazy" />`:`<span class="muted">Chưa đủ thông tin</span>`}</td><td>${transferred?`<span class="payroll-transfer-status done">Đã chuyển</span>`:`<span class="payroll-transfer-status pending">Chưa chuyển</span>`}</td><td>${escapeHtml(row.transferredBy||"")}<small class="muted">${escapeHtml(transferredAt)}</small></td><td><div class="row-actions"><button class="small secondary closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">Chi tiết</button>${transferred?`<span class="muted">Đã xác nhận</span>`:`<button class="small closed-payroll-transfer" data-code="${escapeHtml(row.employeeCode)}" type="button">Đã chuyển lương</button>`}</div></td></tr>`;
   }).join("")||`<tr><td colspan="${columns.length}" class="empty">Bảng lương đã chốt chưa có dòng dữ liệu.</td></tr>`;
   const transferredCount=rows.filter(row=>row.remittanceStatus==="transferred").length;
   const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0);
-  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Tháng ${payload.month} · Chốt bởi ${payload.lockedBy||""} · ${rows.length} tài xế · Thưởng ngày lễ ${formatMoney(payload.holidayBonusTotal||0)} · Tổng lương ${formatMoney(total)} · Đã chuyển ${transferredCount}/${rows.length}`;
+  summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Tháng ${payload.month} · Chốt bởi ${payload.lockedBy||""} · ${rows.length} tài xế · Thưởng ngày lễ ${formatMoney(payload.holidayBonusTotal||0)}${isCargo?` · Thưởng ngày công tăng ca ${formatMoney(payload.extraWorkdayBonusTotal||0)}`:""} · Tổng lương ${formatMoney(total)} · Đã chuyển ${transferredCount}/${rows.length}`;
 }
 
 async function loadClosedPayroll(useSelected=true) {
@@ -5075,7 +5118,7 @@ function openDeductionDialog(row=null) {
   form.dataset.editing=row?.id||"";
   document.querySelector("#deductionDialogTitle").textContent=row?`Sửa khoản trừ · ${row.employeeName||row.employeeCode}`:"Thêm khoản trừ lương";
   const employeeSummary=document.querySelector("#deductionEmployeeSummary"),existingList=document.querySelector("#deductionExistingList");
-  if(employeeSummary){employeeSummary.hidden=!row?.employeeCode;employeeSummary.innerHTML=row?.employeeCode?`<strong>${escapeHtml(row.employeeName||row.employeeCode)}</strong><span>${escapeHtml(row.employeeCode)} · ${row.viewType==="cargo"?"Xe Hàng":"Lái xe Travel"} · ${escapeHtml(row.month||"")}</span>`:"";}
+  if(employeeSummary){employeeSummary.hidden=!row?.employeeCode;employeeSummary.innerHTML=row?.employeeCode?`<strong>${escapeHtml(row.employeeName||row.employeeCode)}</strong><span>${escapeHtml(row.employeeCode)} · ${row.viewType==="cargo"?escapeHtml(row.position||"Xe Hàng"):"Lái xe Travel"} · ${escapeHtml(row.month||"")}</span>`:"";}
   if(existingList){
     const items=Array.isArray(row?.deductions)?row.deductions:[];
     existingList.hidden=!row?.employeeCode||!items.length;
@@ -7520,7 +7563,7 @@ function renderOrders() {
       result.discount += parseMoney(row.giamGia) + parseMoney(row.tongUuDai);
       result.vat += orderVatAmount(row);
       result.deposit += parseMoney(row.daCoc);
-      result.amountDue += orderRevenueAmount(row);
+      result.amountDue += orderPayrollRevenueAmount(row);
       result.commission += parseMoney(row.soTienNopLai);
       const hasDebt = normalize(row.congNo).includes("co");
       let debtAmount = 0;
@@ -7654,3 +7697,4 @@ const searchableSelectObserver = new MutationObserver((records) => {
 searchableSelectObserver.observe(document.body, { childList: true, subtree: true });
 initializeApp();
 window.setInterval(checkAppVersion, APP_VERSION_CHECK_INTERVAL_MS);
+
