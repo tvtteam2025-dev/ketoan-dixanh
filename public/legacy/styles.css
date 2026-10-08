@@ -1146,7 +1146,7 @@ button:disabled {
 .attendance-lock-status { color: #b45309 !important; font-weight: 900 !important; }
 .attendance-legend i { border-radius: 5px; display: grid; font-style: normal; font-weight: 900; height: 24px; place-items: center; width: 24px; }
 .mark-x { background: #e3f6f0; color: #087d6b; }
-.mark-nl { background: #e8e0ff; color: #6d28d9; font-size: .65rem; letter-spacing: .08em; padding-left: .08em; }
+.mark-nl { background: #e8e0ff; color: #6d28d9; font-size: .65rem; letter-spacing: .08em; }
 .mark-o { background: #fff0ad; color: #8c6500; }
 .mark-kl { background: #edf1f2; color: #607479; font-size: .65rem; }
 .attendance-table-wrap { max-height: calc(100vh - 275px); overflow: auto; }
@@ -1167,16 +1167,16 @@ button:disabled {
 .attendance-table .employee-col small { color: #7b8f93; font-size: .68rem; margin-top: 2px; }
 .attendance-table .attendance-mark { font-size: .9rem; font-weight: 900; }
 .attendance-table .attendance-mark.on { color: #087d6b; }
-.attendance-table .attendance-mark.holiday { background: #e8e0ff; color: #6d28d9; font-size: .76rem; }
-.attendance-table .attendance-mark.holiday .attendance-mark-editor { letter-spacing: .12em; padding-left: .12em; }
+.attendance-table .attendance-mark.holiday { background: transparent; color: #6d28d9; font-size: .76rem; padding: 5px; }
 .attendance-table .attendance-mark.off { background: #fff3a9; color: #876100; }
 .attendance-table .attendance-mark.unpaid { background: #f1f4f5; color: #8a999c; font-size: .66rem; font-weight: 800; }
 .attendance-mark-editor { width: 100%; min-width: 32px; height: 34px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 900; text-align: center; text-align-last: center; cursor: pointer; appearance: none; }
+.attendance-table .attendance-mark.holiday .attendance-mark-editor { background: #e8e0ff; border-radius: 6px; display: block; height: 28px; letter-spacing: .08em; margin: 0 auto; min-width: 30px; padding-left: .08em; width: 32px; }
 .attendance-mark-editor:focus-visible { outline: 2px solid #12a99a; outline-offset: -2px; border-radius: 4px; }
 .attendance-mark-editor:disabled { cursor: not-allowed; opacity: 1; }
 .attendance-table .attendance-mark.attendance-editing-paused { cursor: not-allowed; }
 .attendance-table .attendance-mark.attendance-locked { background: #eef2f3; color: #7b8a8d; }
-.attendance-table .attendance-mark.holiday.attendance-locked { background: #e8e0ff; color: #6d28d9; }
+.attendance-table .attendance-mark.holiday.attendance-locked { background: transparent; color: #6d28d9; }
 .attendance-table .attendance-mark.manually-edited { box-shadow: inset 0 0 0 2px rgba(18, 169, 154, .55); position: relative; }
 .attendance-table .attendance-mark.manually-edited::after { content: ""; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: #0b8f83; pointer-events: none; }
 .salary-form { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 14px; padding: 18px; background: #f4f9f9; border: 1px solid #d7e5e7; border-radius: 10px; align-items: end; }
@@ -4019,5 +4019,44 @@ table.finance-report-table {
   display: block;
   font-size: .78rem;
   font-variant-numeric: tabular-nums;
+}
+/* Khu vực lái xe: giữ các trường và nút thao tác tách khỏi bảng dữ liệu. */
+#driverAreaForm {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 16px 0 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+#driverAreaForm label {
+  margin: 0;
+}
+
+#driverAreaSubmit {
+  min-height: 42px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+#driverAreaStatus {
+  grid-column: 1 / -1;
+  min-height: 20px;
+}
+
+#driverAreasView .table-wrap {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  #driverAreaForm {
+    grid-template-columns: 1fr;
+  }
+
+  #driverAreaSubmit {
+    width: max-content;
+  }
 }
 

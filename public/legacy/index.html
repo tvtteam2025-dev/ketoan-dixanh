@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kế toán Đi Xanh</title>
-    <link rel="stylesheet" href="/legacy/styles.css?v=travel-holiday-rule-20260930-2" />
+    <link rel="stylesheet" href="/legacy/styles.css?v=travel-holiday-rule-20261002-1" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen">
@@ -47,6 +47,7 @@
             <div class="nav-group-items">
               <button class="nav-item" data-view="orders" type="button">Đơn hàng</button>
               <button class="nav-item" data-view="carWash" type="button">Quản lý rửa xe</button>
+              <button class="nav-item" data-view="driverAreas" type="button">Khu vực lái xe</button>
             </div>
           </div>
           <div class="nav-group">
@@ -431,7 +432,7 @@
                   <strong id="orderSummaryDiscount">0 đ</strong>
                 </article>
                 <article class="order-quick-summary-card">
-                  <span>Doanh thu tính lương</span>
+                  <span>Doanh thu</span>
                   <strong id="orderSummaryAmountDue">0 đ</strong>
                 </article>
                 <article class="order-quick-summary-card">
@@ -480,10 +481,26 @@
                 <button id="attendanceRefreshButton" type="button">Tải bảng công</button>
               </div>
             </div>
-            <div class="attendance-legend"><span><i class="mark-x">X</i> Có đi làm (tính công)</span><span><i class="mark-nl">NL</i> Ngày lễ có đi làm (tính công + thưởng)</span><span><i class="mark-o">O</i> Không đi làm (không tính công)</span><span><i class="mark-kl">KL</i> Nghỉ không lương</span><span>Chỉ xem · đang tạm khóa chỉnh sửa</span><span id="attendanceLockStatus" class="attendance-lock-status"></span><span id="attendanceSummary">Đang chờ tải dữ liệu</span></div>
+            <div class="attendance-legend"><span><i class="mark-x">X</i> Có đi làm (tính công)</span><span><i class="mark-nl">NL</i> Ngày lễ (tính công)</span><span><i class="mark-o">O</i> Nghỉ có lương (không tính công)</span><span><i class="mark-kl">KL</i> Nghỉ không lương</span><span>Chỉ xem · đang tạm khóa chỉnh sửa</span><span id="attendanceLockStatus" class="attendance-lock-status"></span><span id="attendanceSummary">Đang chờ tải dữ liệu</span></div>
             <div class="attendance-table-wrap">
               <table class="attendance-table" id="attendanceTable"></table>
             </div>
+          </div>
+        </section>
+
+        <section id="driverAreasView" class="view">
+          <div class="panel salary-panel">
+            <div class="panel-title">
+              <div><h2>Khai báo khu vực hoạt động lái xe</h2><p>Khu vực khai báo tại đây được ưu tiên khi xuất Lệnh nộp tiền.</p></div>
+              <input id="driverAreaSearch" class="search-input salary-list-search" type="search" placeholder="Tìm mã nhân viên, họ tên, khu vực..." />
+            </div>
+            <form id="driverAreaForm" class="catalog-toolbar">
+              <label class="required"><span>Lái xe</span><select id="driverAreaDriver" data-searchable="true" required><option value="">Chọn mã nhân viên · họ tên</option></select></label>
+              <label class="required"><span>Khu vực hoạt động</span><input id="driverAreaValue" list="driverAreaOptions" maxlength="100" placeholder="Ví dụ: Vũng Tàu" required /><datalist id="driverAreaOptions"></datalist></label>
+              <button id="driverAreaSubmit" type="submit">Lưu khu vực</button>
+              <span id="driverAreaStatus" class="form-status"></span>
+            </form>
+            <div class="table-wrap"><table><thead><tr><th>STT</th><th>Mã NV</th><th>Họ và tên</th><th>Khu vực hoạt động</th><th>Người khai báo</th><th>Thời gian</th><th>Thao tác</th></tr></thead><tbody id="driverAreaTable"></tbody></table></div>
           </div>
         </section>
 
@@ -693,7 +710,7 @@
 
         <dialog id="payrollHolidayDialog" class="salary-dialog">
           <div class="dialog-panel salary-dialog-panel payroll-holiday-dialog-panel">
-            <div class="salary-dialog-title"><div><h2>Khai báo ngày lễ tính lương</h2><p>Ngày lễ có tính công hiển thị NL. Xe Hàng lên ca được thưởng lễ; xuống ca vẫn tính công và hiển thị NL nhưng không thưởng lễ.</p></div><button class="secondary small" id="closePayrollHolidayDialog" type="button">Đóng</button></div>
+            <div class="salary-dialog-title"><div><h2>Khai báo ngày lễ tính lương</h2><p>Travel: lên ca ngày lễ hiển thị NL, tính công và thưởng; xuống ca hiển thị O, không tính công và không thưởng. Xe Hàng: lên ca được thưởng; xuống ca vẫn tính công, hiển thị NL nhưng không thưởng.</p></div><button class="secondary small" id="closePayrollHolidayDialog" type="button">Đóng</button></div>
             <form id="payrollHolidayForm" class="payroll-holiday-form">
               <label class="required">Ngày lễ<input id="payrollHolidayDate" type="date" required /></label>
               <label class="required">Tên ngày lễ<input id="payrollHolidayName" type="text" maxlength="150" placeholder="Ví dụ: Quốc khánh" required /></label>
@@ -1935,7 +1952,7 @@
       </form>
     </dialog>
 
-  <script src="/legacy/app.js?v=order-payroll-revenue-20261001-1" type="module"></script>
+  <script src="/legacy/app.js?v=travel-holiday-rule-20261002-1" type="module"></script>
   </body>
 </html>
 
