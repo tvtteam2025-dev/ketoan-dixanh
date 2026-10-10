@@ -1194,6 +1194,65 @@ button:disabled {
 .salary-allowance-line span { color: #395d63; }
 .salary-list-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: 1; margin-left: 20px; }
 .salary-list-search { width: min(510px, 100%); min-width: 260px; }
+.salary-declaration-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.salary-declaration-table {
+  min-width: 1640px;
+  table-layout: auto;
+}
+.salary-declaration-table th,
+.salary-declaration-table td {
+  padding: 12px 10px;
+  vertical-align: middle;
+}
+.salary-declaration-table tbody tr:nth-child(even) { background: #fbfdfd; }
+.salary-declaration-table th:nth-child(1), .salary-declaration-table td:nth-child(1) { min-width: 88px; white-space: nowrap; }
+.salary-declaration-table th:nth-child(2), .salary-declaration-table td:nth-child(2) { min-width: 165px; }
+.salary-declaration-table th:nth-child(3), .salary-declaration-table td:nth-child(3) { min-width: 105px; white-space: nowrap; }
+.salary-declaration-table th:nth-child(4), .salary-declaration-table td:nth-child(4) { min-width: 120px; white-space: nowrap; }
+.salary-declaration-table th:nth-child(5), .salary-declaration-table td:nth-child(5) { min-width: 145px; white-space: nowrap; }
+.salary-declaration-table th:nth-child(6), .salary-declaration-table td:nth-child(6) { min-width: 170px; }
+.salary-declaration-table th:nth-child(7), .salary-declaration-table td:nth-child(7),
+.salary-declaration-table th:nth-child(10), .salary-declaration-table td:nth-child(10),
+.salary-declaration-table th:nth-child(11), .salary-declaration-table td:nth-child(11) { min-width: 120px; white-space: nowrap; text-align: right; }
+.salary-declaration-table th:nth-child(8) {
+  min-width: 132px;
+  background: #dff3f0;
+  color: #087d6b;
+  text-align: center;
+}
+.salary-declaration-table td:nth-child(8) { min-width: 132px; text-align: center; }
+.salary-lunch-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  padding: 6px 10px;
+  border: 1px solid #a9ddd5;
+  border-radius: 999px;
+  background: #effaf7;
+  color: #087d6b;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.salary-declaration-table th:nth-child(9), .salary-declaration-table td:nth-child(9) { min-width: 200px; }
+.salary-declaration-table th:nth-child(12), .salary-declaration-table td:nth-child(12) { min-width: 145px; }
+.salary-declaration-table th:last-child,
+.salary-declaration-table td:last-child {
+  position: sticky;
+  right: 0;
+  min-width: 138px;
+  background: #fff;
+  box-shadow: -8px 0 14px rgba(28, 67, 72, .07);
+}
+.salary-declaration-table th:last-child { z-index: 4; background: #e8f3f3; text-align: center; }
+.salary-declaration-table tbody tr:nth-child(even) td:last-child { background: #fbfdfd; }
+.salary-declaration-table tbody tr:hover td:last-child { background: #f1f9f7; }
+.salary-declaration-table .row-actions { min-width: 0; justify-content: center; flex-wrap: nowrap; gap: 6px; }
+.salary-declaration-table .row-actions button { min-width: 54px; padding-inline: 10px; }
 @media (max-width: 900px) { .salary-list-actions { width: 100%; margin-left: 0; justify-content: stretch; } .salary-list-search { flex: 1; min-width: 0; } }
 .payroll-title { align-items: flex-end; }
 .payroll-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; justify-content: flex-end; }
