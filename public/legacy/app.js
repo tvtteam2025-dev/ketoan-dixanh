@@ -122,7 +122,2034 @@ const systemLogActionLabels = {
   delete_order: "Xóa đơn hàng",
   request_reopen: "Yêu cầu mở lại",
   approve_reopen: "Duyệt mở lại",
-  reject_reignName(row.tenVoucher))}</td>
+  reject_reopen: "Từ chối mở lại",
+  create_user: "Tạo tài khoản",
+  update_user: "Cập nhật tài khoản",
+  reset_password: "Reset mật khẩu",
+  change_password: "Đổi mật khẩu",
+  update_customer: "Cập nhật khách hàng",
+  delete_customer: "Xóa khách hàng",
+  update_tour: "Cập nhật tuyến",
+  delete_tour: "Xóa tuyến",
+  update_voucher: "Cập nhật voucher",
+  delete_voucher: "Xóa voucher",
+  update_promotion: "Cập nhật khuyến mãi",
+  delete_promotion: "Xóa khuyến mãi",
+  create_invoice_group: "Tạo hóa đơn gộp",
+  update_invoice_group_status: "Cập nhật hóa đơn gộp",
+  update_invoice_status: "Cập nhật hóa đơn",
+  update_debt_status: "Cập nhật công nợ",
+  update_commission_status: "Cập nhật hoa hồng",
+  create_order_feedback: "Thêm phản hồi khách hàng",
+  update_order_feedback: "Cập nhật phản hồi khách hàng",
+  update_franchise_vehicle: "Cập nhật xe thương quyền",
+  delete_franchise_vehicle: "Xóa xe thương quyền",
+  create_system_catalog: "Thêm danh mục hệ thống",
+  delete_system_catalog: "Xóa danh mục hệ thống",
+  update_calendar_vehicle_order: "Sắp xếp lịch điều xe",
+  reset_calendar_vehicle_order: "Khôi phục thứ tự lịch điều xe",
+  delete_cskh_shift_report: "Xóa báo cáo ca CSKH",
+};
+
+const systemLogFieldLabels = {
+  tenKhach: "Tên khách hàng",
+  soDienThoai: "Số điện thoại",
+  tuyen: "Tuyến",
+  diemDon: "Điểm đón",
+  diemTra: "Điểm trả",
+  ngayGioDi: "Ngày giờ đi",
+  ngayGioDuKienKetThuc: "Ngày giờ đến dự kiến",
+  bienKiemSoat: "Biển kiểm soát",
+  hoTenLaiXe: "Lái xe",
+  soCho: "Số chỗ",
+  giaTien: "Giá tiền",
+  giamGia: "Giảm giá",
+  phuThu: "Phụ thu",
+  daCoc: "Đã cọc",
+  thucThu: "Thực thu",
+  soTienNopLai: "Hoa hồng phải thu",
+  tongUuDai: "Tổng ưu đãi",
+  thueVAT: "Thuế VAT",
+  tongThanhToan: "Tổng thanh toán",
+  voucherCodes: "Voucher",
+  khuyenMai: "Khuyến mãi",
+  ghiChu: "Ghi chú",
+  trangThai: "Trạng thái đơn",
+  trangThaiHoaDon: "Trạng thái hóa đơn",
+  trangThaiCongNo: "Trạng thái công nợ",
+  trangThaiHoaHong: "Trạng thái hoa hồng",
+  congNo: "Công nợ",
+  congNoChoAi: "Đối tượng công nợ",
+  yeuCauHoaDon: "Yêu cầu hóa đơn",
+  displayName: "Họ tên nhân viên",
+  role: "Vai trò",
+  status: "Trạng thái",
+};
+
+const defaultVehicleLineOptions = ["Xe điện", "Xe xăng", "Xe dầu", "Xe hybrid"];
+const defaultVehicleMakeOptions = ["Limo Green", "Innova"];
+const systemCatalogTypeLabels = {
+  nguonKhach: "Nguồn khách",
+  dongXe: "Dòng xe",
+  hieuXe: "Hiệu xe",
+};
+const vehicleSeatOptions = ["4 chỗ", "5 chỗ", "7 chỗ", "9 chỗ", "16 chỗ", "29 chỗ", "45 chỗ", "Tải Van 945 KG"];
+const defaultCustomerSourceOptions = ["Facebook Ads", "Tổng đài", "Tiktok", "Lái xe giới thiệu", "Khách cũ", "Khác"];
+
+function catalogValues(type, fallback = []) {
+  const values = state.systemCatalogs
+    .filter((row) => row.loaiDanhMuc === type)
+    .map((row) => String(row.giaTri || "").trim())
+    .filter(Boolean);
+  return state.systemCatalogsLoaded ? values : fallback;
+}
+
+function customerSourceOptions() {
+  return catalogValues("nguonKhach", defaultCustomerSourceOptions);
+}
+
+function vehicleLineOptions() {
+  return catalogValues("dongXe", defaultVehicleLineOptions);
+}
+
+function vehicleMakeOptions() {
+  return catalogValues("hieuXe", defaultVehicleMakeOptions);
+}
+const reportTypes = [
+  {
+    value: "summary",
+    label: "Báo cáo tổng hợp",
+    mode: "month",
+    actions: ["reports_all", "reports_revenue", "export_excel"],
+    description: "Doanh thu, lượt khách, khu vực đặt xe, nguồn khách, danh sách khách hàng và danh sách xe thương quyền.",
+    tags: ["Tổng quan", "Doanh thu", "Khách hàng", "Xe TQ"],
+  },
+  {
+    value: "vouchers",
+    label: "Báo cáo voucher",
+    mode: "month",
+    actions: ["reports_all", "export_excel", "export_vouchers"],
+    description: "Voucher còn hạn, hết hạn, đã sử dụng, chưa sử dụng và các đơn hàng đã áp mã.",
+    tags: ["Tất cả voucher", "Đã sử dụng", "Chi tiết đơn hàng"],
+  },
+  {
+    value: "orders",
+    label: "Báo cáo tất cả đơn hàng",
+    mode: "range",
+    actions: ["reports_all", "export_excel", "export_orders"],
+    description: "Toàn bộ đơn trong khoảng ngày, gồm tài chính, điều xe, hóa đơn, voucher và khuyến mãi đã dùng.",
+    tags: ["Danh sách đơn hàng", "Khách xe ghép", "Voucher/khuyến mãi"],
+  },
+  {
+    value: "workPerformance",
+    label: "Báo cáo hiệu suất làm việc",
+    mode: "range",
+    actions: ["reports_all", "export_excel", "export_orders"],
+    description: "Danh sách đơn hàng được lọc theo ngày tạo đơn, gồm nguồn khách, loại đơn, ngày khách đi, trạng thái và ghi chú.",
+    tags: ["Ngày tạo đơn", "Nguồn khách", "Trạng thái đơn"],
+  },
+  {
+    value: "customers",
+    label: "Danh sách khách hàng",
+    mode: "none",
+    actions: ["reports_all", "export_customers"],
+    description: "Toàn bộ khách hàng, thông tin liên hệ, nguồn khách, ngày tạo, giao dịch cuối, số đơn và tổng doanh thu.",
+    tags: ["Thông tin khách", "Nguồn khách", "Lịch sử giao dịch"],
+  },
+  {
+    value: "debts",
+    label: "Báo cáo công nợ",
+    mode: "none",
+    actions: ["reports_all", "export_debts"],
+    description: "Danh sách đơn hàng công nợ, người chịu công nợ và số tiền còn phải thu.",
+    tags: ["Công nợ", "Kế toán", "Còn phải thu"],
+  },
+  {
+    value: "driverRevenue",
+    label: "Báo cáo doanh thu lái xe",
+    mode: "range",
+    actions: ["reports_all", "reports_revenue", "export_excel"],
+    description: "Doanh thu từng lái xe sau giảm giá, voucher, khuyến mãi và VAT; có phân biệt đơn công nợ và thực thu.",
+    tags: ["Lái xe", "Doanh thu sau VAT", "Thực thu"],
+  },
+];
+
+const els = {
+  loginScreen: document.querySelector("#loginScreen"),
+  appShell: document.querySelector("#appShell"),
+  loginForm: document.querySelector("#loginForm"),
+  loginStatus: document.querySelector("#loginStatus"),
+  loginSubmitButton: document.querySelector("#loginSubmitButton"),
+  currentUserLabel: document.querySelector("#currentUserLabel"),
+  logoutButton: document.querySelector("#logoutButton"),
+  pageTitle: document.querySelector("#pageTitle"),
+  pageHint: document.querySelector("#pageHint"),
+  syncStatus: document.querySelector("#syncStatus"),
+  refreshButton: document.querySelector("#refreshButton"),
+  customerCount: document.querySelector("#customerCount"),
+  contractCount: document.querySelector("#contractCount"),
+  openOrderCount: document.querySelector("#openOrderCount"),
+  doneOrderCount: document.querySelector("#doneOrderCount"),
+  vehicleCount: document.querySelector("#vehicleCount"),
+  availableVehicleCount: document.querySelector("#availableVehicleCount"),
+  dashboardTodayLabel: document.querySelector("#dashboardTodayLabel"),
+  dashboardDateFilter: document.querySelector("#dashboardDateFilter"),
+  dashboardMoneySummary: document.querySelector("#dashboardMoneySummary"),
+  dashboardMonthRevenueTitle: document.querySelector("#dashboardMonthRevenueTitle"),
+  dashboardMonthRevenueTotal: document.querySelector("#dashboardMonthRevenueTotal"),
+  dashboardMonthRevenueBars: document.querySelector("#dashboardMonthRevenueBars"),
+  dashboardTopSources: document.querySelector("#dashboardTopSources"),
+  dashboardRegions: document.querySelector("#dashboardRegions"),
+  customerTable: document.querySelector("#customerTable"),
+  contractTable: document.querySelector("#contractTable"),
+  contractsView: document.querySelector("#contractsView"),
+  contractPricingView: document.querySelector("#contractPricingView"),
+  contractPricingKm: document.querySelector("#contractPricingKm"),
+  contractPricingWeekend: document.querySelector("#contractPricingWeekend"),
+  contractPricingResults: document.querySelector("#contractPricingResults"),
+  contractPricingSetup: document.querySelector("#contractPricingSetup"),
+  oneWayPricingTable: document.querySelector("#oneWayPricingTable"),
+  roundTripPricingTable: document.querySelector("#roundTripPricingTable"),
+  waitingPricingTable: document.querySelector("#waitingPricingTable"),
+  saveContractPricingButton: document.querySelector("#saveContractPricingButton"),
+  contractPricingStatus: document.querySelector("#contractPricingStatus"),
+  overnightCalculatorForm: document.querySelector("#overnightCalculatorForm"),
+  overnightStartInput: document.querySelector("#overnightStartInput"),
+  overnightEndInput: document.querySelector("#overnightEndInput"),
+  overnightFreeWaitInput: document.querySelector("#overnightFreeWaitInput"),
+  overnightMovingHoursInput: document.querySelector("#overnightMovingHoursInput"),
+  overnightResetButton: document.querySelector("#overnightResetButton"),
+  overnightCalculatorResult: document.querySelector("#overnightCalculatorResult"),
+  voucherTable: document.querySelector("#voucherTable"),
+  printSelectedVouchersButton: document.querySelector("#printSelectedVouchersButton"),
+  deleteVoucherCampaignButton: document.querySelector("#deleteVoucherCampaignButton"),
+  selectAllVouchersCheckbox: document.querySelector("#selectAllVouchersCheckbox"),
+  promotionTable: document.querySelector("#promotionTable"),
+  orderTable: document.querySelector("#orderTable"),
+  invoiceOrderTable: document.querySelector("#invoiceOrderTable"),
+  debtOrderTable: document.querySelector("#debtOrderTable"),
+  commissionOrderTable: document.querySelector("#commissionOrderTable"),
+  orderFeedbackTable: document.querySelector("#orderFeedbackTable"),
+  cskhShiftReportForm: document.querySelector("#cskhShiftReportForm"),
+  cskhShiftReportSubmitButton: document.querySelector("#cskhShiftReportSubmitButton"),
+  cskhShiftReportExportButton: document.querySelector("#cskhShiftReportExportButton"),
+  cskhShiftReportFromInput: document.querySelector("#cskhShiftReportFromInput"),
+  cskhShiftReportToInput: document.querySelector("#cskhShiftReportToInput"),
+  cskhShiftReportStatus: document.querySelector("#cskhShiftReportStatus"),
+  cskhShiftReportTable: document.querySelector("#cskhShiftReportTable"),
+  vehicleTable: document.querySelector("#vehicleTable"),
+  fuelForm: document.querySelector("#fuelForm"),
+  fuelTable: document.querySelector("#fuelTable"),
+  fuelSummary: document.querySelector("#fuelSummary"),
+  fuelImportTemplateButton: document.querySelector("#fuelImportTemplateButton"),
+  fuelImportButton: document.querySelector("#fuelImportButton"),
+  fuelImportInput: document.querySelector("#fuelImportInput"),
+  fuelDriverSearch: document.querySelector("#fuelDriverSearch"),
+  fuelSearchResult: document.querySelector("#fuelSearchResult"),
+  fuelRecordId: document.querySelector("#fuelRecordId"),
+  fuelDate: document.querySelector("#fuelDate"),
+  fuelDriver: document.querySelector("#fuelDriver"),
+  fuelPlate: document.querySelector("#fuelPlate"),
+  fuelType: document.querySelector("#fuelType"),
+  fuelLiters: document.querySelector("#fuelLiters"),
+  fuelPrice: document.querySelector("#fuelPrice"),
+  fuelAmount: document.querySelector("#fuelAmount"),
+  fuelPreviousOdometer: document.querySelector("#fuelPreviousOdometer"),
+  fuelPreviousOdometerHint: document.querySelector("#fuelPreviousOdometerHint"),
+  fuelOdometer: document.querySelector("#fuelOdometer"),
+  fuelDistance: document.querySelector("#fuelDistance"),
+  fuelDistanceHint: document.querySelector("#fuelDistanceHint"),
+  fuelFormStatus: document.querySelector("#fuelFormStatus"),
+  fuelSubmitButton: document.querySelector("#fuelSubmitButton"),
+  fuelCancelButton: document.querySelector("#fuelCancelButton"),
+  fuelPriceForm: document.querySelector("#fuelPriceForm"),
+  fuelPriceMonth: document.querySelector("#fuelPriceMonth"),
+  fuelPriceAmount: document.querySelector("#fuelPriceAmount"),
+  fuelPriceStatus: document.querySelector("#fuelPriceStatus"),
+  fuelPriceSubmitButton: document.querySelector("#fuelPriceSubmitButton"),
+  fuelPriceTable: document.querySelector("#fuelPriceTable"),
+  fuelStandardMonth: document.querySelector("#fuelStandardMonth"),
+  fuelStandardRefreshButton: document.querySelector("#fuelStandardRefreshButton"),
+  fuelStandardExportButton: document.querySelector("#fuelStandardExportButton"),
+  fuelStandardTable: document.querySelector("#fuelStandardTable"),
+  fuelStandardSummary: document.querySelector("#fuelStandardSummary"),
+  carWashForm: document.querySelector("#carWashForm"),
+  carWashTable: document.querySelector("#carWashTable"),
+  carWashSummary: document.querySelector("#carWashSummary"),
+  carWashDate: document.querySelector("#carWashDate"),
+  carWashDriverList: document.querySelector("#carWashDriverList"),
+  carWashFormStatus: document.querySelector("#carWashFormStatus"),
+  carWashFromDate: document.querySelector("#carWashFromDate"),
+  carWashToDate: document.querySelector("#carWashToDate"),
+  carWashRefreshButton: document.querySelector("#carWashRefreshButton"),
+  carWashExportButton: document.querySelector("#carWashExportButton"),
+  franchiseVehicleTable: document.querySelector("#franchiseVehicleTable"),
+  userTable: document.querySelector("#userTable"),
+  reopenRequestTable: document.querySelector("#reopenRequestTable"),
+  systemLogTable: document.querySelector("#systemLogTable"),
+  systemLogSearch: document.querySelector("#systemLogSearch"),
+  systemLogActionFilter: document.querySelector("#systemLogActionFilter"),
+  dispatchSummary: document.querySelector("#dispatchSummary"),
+  dispatchTable: document.querySelector("#dispatchTable"),
+  customerSearch: document.querySelector("#customerSearch"),
+  contractSearch: document.querySelector("#contractSearch"),
+  voucherCampaignFilter: document.querySelector("#voucherCampaignFilter"),
+  voucherSearch: document.querySelector("#voucherSearch"),
+  promotionSearch: document.querySelector("#promotionSearch"),
+  orderSearch: document.querySelector("#orderSearch"),
+  orderStatusFilter: document.querySelector("#orderStatusFilter"),
+  driverNotificationStatusFilter: document.querySelector("#driverNotificationStatusFilter"),
+  invoiceOrderSearch: document.querySelector("#invoiceOrderSearch"),
+  invoiceStatusFilter: document.querySelector("#invoiceStatusFilter"),
+  invoiceReportDateInput: document.querySelector("#invoiceReportDateInput"),
+  invoiceReportDateToInput: document.querySelector("#invoiceReportDateToInput"),
+  invoiceReportSummary: document.querySelector("#invoiceReportSummary"),
+  debtOrderSearch: document.querySelector("#debtOrderSearch"),
+  debtStatusFilter: document.querySelector("#debtStatusFilter"),
+  debtReportDateInput: document.querySelector("#debtReportDateInput"),
+  debtReportDateToInput: document.querySelector("#debtReportDateToInput"),
+  debtReportSummary: document.querySelector("#debtReportSummary"),
+  commissionOrderSearch: document.querySelector("#commissionOrderSearch"),
+  commissionStatusFilter: document.querySelector("#commissionStatusFilter"),
+  commissionReportDateInput: document.querySelector("#commissionReportDateInput"),
+  commissionReportDateToInput: document.querySelector("#commissionReportDateToInput"),
+  commissionReportSummary: document.querySelector("#commissionReportSummary"),
+  orderFeedbackSearch: document.querySelector("#orderFeedbackSearch"),
+  orderFeedbackStatusFilter: document.querySelector("#orderFeedbackStatusFilter"),
+  orderFeedbackDateFromInput: document.querySelector("#orderFeedbackDateFromInput"),
+  orderFeedbackDateToInput: document.querySelector("#orderFeedbackDateToInput"),
+  vehicleSearch: document.querySelector("#vehicleSearch"),
+  franchiseVehicleSearch: document.querySelector("#franchiseVehicleSearch"),
+  customerDialog: document.querySelector("#customerDialog"),
+  customerForm: document.querySelector("#customerForm"),
+  customerFormStatus: document.querySelector("#customerFormStatus"),
+  customerSubmitButton: document.querySelector("#customerSubmitButton"),
+  openCustomerDialogButton: document.querySelector("#openCustomerDialogButton"),
+  customerCancelButton: document.querySelector("#customerCancelButton"),
+  contractDialog: document.querySelector("#contractDialog"),
+  contractForm: document.querySelector("#contractForm"),
+  contractFormStatus: document.querySelector("#contractFormStatus"),
+  contractSubmitButton: document.querySelector("#contractSubmitButton"),
+  openContractDialogButton: document.querySelector("#openContractDialogButton"),
+  contractCancelButton: document.querySelector("#contractCancelButton"),
+  voucherDialog: document.querySelector("#voucherDialog"),
+  voucherForm: document.querySelector("#voucherForm"),
+  voucherFormStatus: document.querySelector("#voucherFormStatus"),
+  voucherSubmitButton: document.querySelector("#voucherSubmitButton"),
+  openVoucherDialogButton: document.querySelector("#openVoucherDialogButton"),
+  voucherCancelButton: document.querySelector("#voucherCancelButton"),
+  voucherBatchDialog: document.querySelector("#voucherBatchDialog"),
+  voucherBatchForm: document.querySelector("#voucherBatchForm"),
+  voucherBatchFormStatus: document.querySelector("#voucherBatchFormStatus"),
+  voucherBatchSubmitButton: document.querySelector("#voucherBatchSubmitButton"),
+  openVoucherBatchDialogButton: document.querySelector("#openVoucherBatchDialogButton"),
+  voucherBatchCancelButton: document.querySelector("#voucherBatchCancelButton"),
+  promotionDialog: document.querySelector("#promotionDialog"),
+  promotionForm: document.querySelector("#promotionForm"),
+  promotionFormStatus: document.querySelector("#promotionFormStatus"),
+  promotionSubmitButton: document.querySelector("#promotionSubmitButton"),
+  openPromotionDialogButton: document.querySelector("#openPromotionDialogButton"),
+  promotionCancelButton: document.querySelector("#promotionCancelButton"),
+  franchiseVehicleDialog: document.querySelector("#franchiseVehicleDialog"),
+  franchiseVehicleForm: document.querySelector("#franchiseVehicleForm"),
+  franchiseVehicleFormStatus: document.querySelector("#franchiseVehicleFormStatus"),
+  franchiseVehicleSubmitButton: document.querySelector("#franchiseVehicleSubmitButton"),
+  openFranchiseVehicleDialogButton: document.querySelector("#openFranchiseVehicleDialogButton"),
+  franchiseVehicleCancelButton: document.querySelector("#franchiseVehicleCancelButton"),
+  userDialog: document.querySelector("#userDialog"),
+  userForm: document.querySelector("#userForm"),
+  userFormStatus: document.querySelector("#userFormStatus"),
+  userSubmitButton: document.querySelector("#userSubmitButton"),
+  userDialogTitle: document.querySelector("#userDialogTitle"),
+  userPasswordField: document.querySelector("#userPasswordField"),
+  openUserDialogButton: document.querySelector("#openUserDialogButton"),
+  userCancelButton: document.querySelector("#userCancelButton"),
+  systemCatalogForm: document.querySelector("#systemCatalogForm"),
+  systemCatalogType: document.querySelector("#systemCatalogType"),
+  systemCatalogSubmitButton: document.querySelector("#systemCatalogSubmitButton"),
+  systemCatalogFormStatus: document.querySelector("#systemCatalogFormStatus"),
+  systemCatalogTable: document.querySelector("#systemCatalogTable"),
+  openChangePasswordButton: document.querySelector("#openChangePasswordButton"),
+  changePasswordDialog: document.querySelector("#changePasswordDialog"),
+  changePasswordForm: document.querySelector("#changePasswordForm"),
+  changePasswordFormStatus: document.querySelector("#changePasswordFormStatus"),
+  changePasswordSubmitButton: document.querySelector("#changePasswordSubmitButton"),
+  changePasswordCancelButton: document.querySelector("#changePasswordCancelButton"),
+  resetPasswordDialog: document.querySelector("#resetPasswordDialog"),
+  resetPasswordForm: document.querySelector("#resetPasswordForm"),
+  resetPasswordFormStatus: document.querySelector("#resetPasswordFormStatus"),
+  resetPasswordSubmitButton: document.querySelector("#resetPasswordSubmitButton"),
+  resetPasswordCancelButton: document.querySelector("#resetPasswordCancelButton"),
+  reopenDialog: document.querySelector("#reopenDialog"),
+  reopenForm: document.querySelector("#reopenForm"),
+  reopenFormStatus: document.querySelector("#reopenFormStatus"),
+  reopenSubmitButton: document.querySelector("#reopenSubmitButton"),
+  reopenCancelButton: document.querySelector("#reopenCancelButton"),
+  orderDialog: document.querySelector("#orderDialog"),
+  orderForm: document.querySelector("#orderForm"),
+  orderFormStatus: document.querySelector("#orderFormStatus"),
+  orderSubmitButton: document.querySelector("#orderSubmitButton"),
+  openOrderDialogButton: document.querySelector("#openOrderDialogButton"),
+  assignVehicleDialog: document.querySelector("#assignVehicleDialog"),
+  assignVehicleForm: document.querySelector("#assignVehicleForm"),
+  assignVehicleFormStatus: document.querySelector("#assignVehicleFormStatus"),
+  assignVehicleSummary: document.querySelector("#assignVehicleSummary"),
+  assignVehicleSubmitButton: document.querySelector("#assignVehicleSubmitButton"),
+  assignVehicleCancelButton: document.querySelector("#assignVehicleCancelButton"),
+  driverRemittanceDateInput: document.querySelector("#driverRemittanceDateInput"),
+  orderDateToInput: document.querySelector("#orderDateToInput"),
+  orderSummaryTripCount: document.querySelector("#orderSummaryTripCount"),
+  orderSummaryBaseAmount: document.querySelector("#orderSummaryBaseAmount"),
+  orderSummarySurcharge: document.querySelector("#orderSummarySurcharge"),
+  orderSummaryDiscount: document.querySelector("#orderSummaryDiscount"),
+  orderSummaryVat: document.querySelector("#orderSummaryVat"),
+  orderSummaryDeposit: document.querySelector("#orderSummaryDeposit"),
+  orderSummaryAmountDue: document.querySelector("#orderSummaryAmountDue"),
+  orderSummaryActualReceipt: document.querySelector("#orderSummaryActualReceipt"),
+  orderSummaryCommission: document.querySelector("#orderSummaryCommission"),
+  orderSummaryDebt: document.querySelector("#orderSummaryDebt"),
+  reportTypeSelect: document.querySelector("#reportTypeSelect"),
+  reportMonthWrap: document.querySelector("#reportMonthWrap"),
+  reportMonthInput: document.querySelector("#reportMonthInput"),
+  reportFromWrap: document.querySelector("#reportFromWrap"),
+  reportFromInput: document.querySelector("#reportFromInput"),
+  reportToWrap: document.querySelector("#reportToWrap"),
+  reportToInput: document.querySelector("#reportToInput"),
+  reportDescription: document.querySelector("#reportDescription"),
+  reportMetaList: document.querySelector("#reportMetaList"),
+  exportDriverRemittanceButton: document.querySelector("#exportDriverRemittanceButton"),
+  exportSelectedReportButton: document.querySelector("#exportSelectedReportButton"),
+  exportInvoicesReportButton: document.querySelector("#exportInvoicesReportButton"),
+  openInvoiceGroupDialogButton: document.querySelector("#openInvoiceGroupDialogButton"),
+  invoiceGroupDialog: document.querySelector("#invoiceGroupDialog"),
+  invoiceGroupForm: document.querySelector("#invoiceGroupForm"),
+  invoiceGroupFormStatus: document.querySelector("#invoiceGroupFormStatus"),
+  invoiceGroupCandidateTable: document.querySelector("#invoiceGroupCandidateTable"),
+  invoiceGroupSearch: document.querySelector("#invoiceGroupSearch"),
+  invoiceGroupSummary: document.querySelector("#invoiceGroupSummary"),
+  invoiceGroupSubmitButton: document.querySelector("#invoiceGroupSubmitButton"),
+  invoiceGroupCancelButton: document.querySelector("#invoiceGroupCancelButton"),
+  exportDebtsReportButton: document.querySelector("#exportDebtsReportButton"),
+  exportCommissionsReportButton: document.querySelector("#exportCommissionsReportButton"),
+  orderCancelButton: document.querySelector("#orderCancelButton"),
+  orderCustomerId: document.querySelector("#orderCustomerId"),
+  orderCustomerPhone: document.querySelector("#orderCustomerPhone"),
+  orderCustomerName: document.querySelector("#orderCustomerName"),
+  orderCustomerCccd: document.querySelector("#orderCustomerCccd"),
+  orderCustomerAddress: document.querySelector("#orderCustomerAddress"),
+  orderCustomerProfileType: document.querySelector("#orderCustomerProfileType"),
+  orderCustomerBirthYear: document.querySelector("#orderCustomerBirthYear"),
+  orderCustomerGender: document.querySelector("#orderCustomerGender"),
+  orderCustomerSource: document.querySelector("#orderCustomerSource"),
+  orderCustomerStaff: document.querySelector("#orderCustomerStaff"),
+  orderCustomerPreview: document.querySelector("#orderCustomerPreview"),
+  orderContractSelect: document.querySelector("#orderContractSelect"),
+  orderVoucherPicker: document.querySelector("#orderVoucherPicker"),
+  orderPromotionPicker: document.querySelector("#orderPromotionPicker"),
+  orderBenefitsSection: document.querySelector("#orderBenefitsSection"),
+  benefitPreview: document.querySelector("#benefitPreview"),
+  orderPaymentSummary: document.querySelector("#orderPaymentSummary"),
+  orderPickupInput: document.querySelector("#orderPickupInput"),
+  orderDropoffInput: document.querySelector("#orderDropoffInput"),
+  orderVehicleSelect: document.querySelector("#orderVehicleSelect"),
+  orderDriverName: document.querySelector("#orderDriverName"),
+  orderVehicleType: document.querySelector("#orderVehicleType"),
+  orderVehicleSeats: document.querySelector("#orderVehicleSeats"),
+  franchiseCommissionWrap: document.querySelector("#franchiseCommissionWrap"),
+  franchiseCommissionInput: document.querySelector("#franchiseCommissionInput"),
+  ticketCountInput: document.querySelector("#ticketCountInput"),
+  ticketCountWrap: document.querySelector("#ticketCountWrap"),
+  sharedPassengersSection: document.querySelector("#sharedPassengersSection"),
+  sharedPassengerList: document.querySelector("#sharedPassengerList"),
+  vehicleWarning: document.querySelector("#vehicleWarning"),
+  invoiceToggle: document.querySelector("#invoiceToggle"),
+  orderInvoiceSection: document.querySelector("#orderInvoiceSection"),
+  orderDebtSection: document.querySelector("#orderDebtSection"),
+  invoiceFields: document.querySelector("#invoiceFields"),
+  calendarDateInput: document.querySelector("#calendarDateInput"),
+  calendarTodayButton: document.querySelector("#calendarTodayButton"),
+  calendarAvailabilityFilter: document.querySelector("#calendarAvailabilityFilter"),
+  calendarOwnershipFilter: document.querySelector("#calendarOwnershipFilter"),
+  calendarResetOrderButton: document.querySelector("#calendarResetOrderButton"),
+  completeDialog: document.querySelector("#completeDialog"),
+  completeForm: document.querySelector("#completeForm"),
+  completeOrderLabel: document.querySelector("#completeOrderLabel"),
+  completeOrderSummary: document.querySelector("#completeOrderSummary"),
+  completeSubmitButton: document.querySelector("#completeSubmitButton"),
+  completeCancelButton: document.querySelector("#completeCancelButton"),
+  detailsDialog: document.querySelector("#detailsDialog"),
+  detailsForm: document.querySelector("#detailsForm"),
+  detailsTitle: document.querySelector("#detailsTitle"),
+  detailsStatus: document.querySelector("#detailsStatus"),
+  detailsReadonly: document.querySelector("#detailsReadonly"),
+  detailsEditor: document.querySelector("#detailsEditor"),
+  detailsSaveButton: document.querySelector("#detailsSaveButton"),
+  detailsDeleteButton: document.querySelector("#detailsDeleteButton"),
+  detailsCloseButton: document.querySelector("#detailsCloseButton"),
+};
+
+function normalize(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
+}
+
+const searchableSelectControls = new WeakMap();
+let searchableSelectRefreshQueued = false;
+let openSearchableSelectControl = null;
+
+function searchableSelectLabel(select) {
+  const label = select.closest("label");
+  const explicitLabel = select.getAttribute("aria-label") || label?.querySelector(":scope > span")?.textContent || "";
+  if (explicitLabel.trim()) return explicitLabel.trim();
+  const directText = [...(label?.childNodes || [])]
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent || "")
+    .join(" ")
+    .trim();
+  return directText || "danh sách";
+}
+
+function closeSearchableSelect(control, { restoreFocus = false } = {}) {
+  if (!control || control.menu.hidden) return;
+  control.menu.hidden = true;
+  control.trigger.setAttribute("aria-expanded", "false");
+  control.wrapper.classList.remove("open");
+  if (openSearchableSelectControl === control) openSearchableSelectControl = null;
+  if (restoreFocus) control.trigger.focus();
+}
+
+function renderSearchableSelectOptions(select) {
+  const control = searchableSelectControls.get(select);
+  if (!control) return;
+  const keyword = normalize(control.searchInput.value);
+  const options = [...select.options].filter((option) => {
+    if (option.disabled || !String(option.value || "").trim()) return false;
+    return !keyword || normalize(`${option.textContent} ${option.value}`).includes(keyword);
+  });
+  control.options.replaceChildren();
+  if (!options.length) {
+    const empty = document.createElement("div");
+    empty.className = "searchable-select-empty";
+    empty.textContent = "Không tìm thấy kết quả phù hợp.";
+    control.options.append(empty);
+    return;
+  }
+  options.forEach((option) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "searchable-select-option";
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", option.selected ? "true" : "false");
+    item.textContent = option.textContent || option.value;
+    item.addEventListener("click", () => {
+      select.value = option.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      closeSearchableSelect(control, { restoreFocus: true });
+    });
+    control.options.append(item);
+  });
+}
+
+function syncSearchableSelect(select) {
+  const control = searchableSelectControls.get(select);
+  if (!control) return;
+  const selected = select.selectedOptions?.[0];
+  control.value.textContent = selected?.textContent || select.options?.[0]?.textContent || "Chọn";
+  control.value.classList.toggle("placeholder", !String(select.value || "").trim());
+  control.trigger.disabled = select.disabled;
+  if (!control.menu.hidden) renderSearchableSelectOptions(select);
+}
+
+function openSearchableSelect(select) {
+  const control = searchableSelectControls.get(select);
+  if (!control || control.trigger.disabled) return;
+  if (openSearchableSelectControl && openSearchableSelectControl !== control) closeSearchableSelect(openSearchableSelectControl);
+  control.searchInput.value = "";
+  renderSearchableSelectOptions(select);
+  control.menu.hidden = false;
+  control.trigger.setAttribute("aria-expanded", "true");
+  control.wrapper.classList.add("open");
+  openSearchableSelectControl = control;
+  window.requestAnimationFrame(() => control.searchInput.focus());
+}
+
+function enhanceSearchableSelect(select) {
+  if (!(select instanceof HTMLSelectElement) || select.multiple || select.dataset.noSearch === "true") return;
+  const optionCount = [...select.options].filter((option) => String(option.value || "").trim()).length;
+  const isExplicit = select.dataset.searchable === "true";
+  if (!isExplicit && (!select.closest("label") || optionCount < 8)) return;
+
+  if (!searchableSelectControls.has(select)) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "searchable-select";
+    wrapper.innerHTML = `
+      <button class="searchable-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="searchable-select-value"></span><span class="searchable-select-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div class="searchable-select-menu" hidden>
+        <div class="searchable-select-search"><span aria-hidden="true">🔍</span><input type="search" autocomplete="off" /></div>
+        <div class="searchable-select-options" role="listbox"></div>
+      </div>`;
+    select.before(wrapper);
+    wrapper.prepend(select);
+    select.classList.add("searchable-select-native");
+    const control = {
+      wrapper,
+      trigger: wrapper.querySelector(".searchable-select-trigger"),
+      value: wrapper.querySelector(".searchable-select-value"),
+      menu: wrapper.querySelector(".searchable-select-menu"),
+      searchInput: wrapper.querySelector(".searchable-select-search input"),
+      options: wrapper.querySelector(".searchable-select-options"),
+    };
+    control.searchInput.placeholder = `Tìm ${searchableSelectLabel(select).toLowerCase()}...`;
+    control.searchInput.setAttribute("aria-label", `Tìm trong ${searchableSelectLabel(select)}`);
+    searchableSelectControls.set(select, control);
+
+    control.trigger.addEventListener("click", () => {
+      if (control.menu.hidden) openSearchableSelect(select);
+      else closeSearchableSelect(control);
+    });
+    control.trigger.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        openSearchableSelect(select);
+      }
+    });
+    control.searchInput.addEventListener("input", () => renderSearchableSelectOptions(select));
+    control.searchInput.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSearchableSelect(control, { restoreFocus: true });
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        control.options.querySelector("button")?.focus();
+      }
+    });
+    control.options.addEventListener("keydown", (event) => {
+      const current = event.target.closest("button");
+      if (!current) return;
+      if (event.key === "Escape") closeSearchableSelect(control, { restoreFocus: true });
+      if (event.key === "ArrowDown") { event.preventDefault(); current.nextElementSibling?.focus(); }
+      if (event.key === "ArrowUp") { event.preventDefault(); (current.previousElementSibling || control.searchInput).focus(); }
+    });
+    select.addEventListener("change", () => {
+      syncSearchableSelect(select);
+      closeSearchableSelect(control);
+    });
+    select.addEventListener("invalid", () => control.trigger.focus());
+  }
+  syncSearchableSelect(select);
+}
+
+function refreshSearchableSelects() {
+  searchableSelectRefreshQueued = false;
+  document.querySelectorAll("select").forEach(enhanceSearchableSelect);
+}
+
+function scheduleSearchableSelectRefresh() {
+  if (searchableSelectRefreshQueued) return;
+  searchableSelectRefreshQueued = true;
+  window.requestAnimationFrame(refreshSearchableSelects);
+}
+
+const roleLabels = {
+  admin: "Admin",
+  ke_toan: "Kế toán",
+  cskh: "CSKH",
+  marketing: "Marketing",
+  ban_giam_doc: "Ban Giám đốc",
+  kinh_doanh: "Kinh Doanh",
+};
+
+// Tạm khóa theo yêu cầu quản trị. Khi bật lại phải đồng thời bật
+// ATTENDANCE_EDITING_ENABLED ở backend để API ghi dữ liệu được mở.
+const ATTENDANCE_EDITING_ENABLED = false;
+
+function roleLabel(role) {
+  return state.roles?.[role] || roleLabels[role] || role || "";
+}
+
+function showLogin(message = "") {
+  state.currentUser = null;
+  state.permissions = { views: [], actions: [] };
+  if (els.appShell) els.appShell.hidden = true;
+  if (els.loginScreen) els.loginScreen.hidden = false;
+  if (els.loginStatus) els.loginStatus.textContent = message;
+}
+
+function isAccountingAppRole(role) {
+  return ["admin", "ke_toan"].includes(String(role || "").trim());
+}
+
+function showApp() {
+  if (!isAccountingAppRole(state.currentUser?.role)) {
+    clearAuth("Ứng dụng này chỉ dành cho tài khoản Kế toán hoặc Admin.");
+    return;
+  }
+  if (els.loginScreen) els.loginScreen.hidden = true;
+  if (els.appShell) els.appShell.hidden = false;
+  if (els.currentUserLabel) {
+    const name = state.currentUser?.displayName || state.currentUser?.username || "User";
+    const role = roleLabel(state.currentUser?.role || "");
+    els.currentUserLabel.textContent = role ? `${name} - ${role}` : name;
+  }
+  syncCskhShiftForm();
+}
+
+function clearAuth(message = "Vui lòng đăng nhập lại.") {
+  state.authToken = "";
+  window.localStorage.removeItem("diXanhAuthToken");
+  showLogin(message);
+}
+
+async function checkAppVersion() {
+  try {
+    const response = await fetch("/api/proxy/app-version", { cache: "no-store", credentials: "same-origin" });
+    if (!response.ok) return true;
+    const payload = await response.json();
+    const version = String(payload.version || "");
+    if (!version) return true;
+    const previousVersion = window.localStorage.getItem(APP_VERSION_STORAGE_KEY) || "";
+    window.localStorage.setItem(APP_VERSION_STORAGE_KEY, version);
+    if (previousVersion && previousVersion !== version && state.authToken) {
+      clearAuth("Ứng dụng vừa được cập nhật. Vui lòng đăng nhập lại.");
+      return false;
+    }
+  } catch (error) {
+    // Không đăng xuất chỉ vì kiểm tra phiên bản tạm thời mất kết nối.
+  }
+  return true;
+}
+
+const disabledViews = new Set(["overnightCalculator"]);
+const accountingViews = new Set(["orders", "attendance", "cargoAttendance", "fuel", "fuelStandard", "fuelPrices", "carWash", "driverSalaries", "payroll", "closedPayroll", "payrollDeductions", "invoiceOrders", "debtOrders", "commissionOrders", "reports", "permissions"]);
+const accountingActions = new Set(["manage_invoices", "create_invoice_groups", "export_invoices", "export_excel", "export_debts", "manage_debts", "manage_commissions", "export_commissions", "manage_remittance_status", "manage_attendance", "manage_fuel", "manage_car_wash", "manage_driver_salaries", "manage_payroll_deductions", "lock_payroll", "manage_users"]);
+
+function can(action) {
+  if (!accountingActions.has(action)) return false;
+  if (state.currentUser?.role === "admin") return true;
+  return (state.permissions.actions || []).includes(action);
+}
+
+function canView(view) {
+  if (!accountingViews.has(view)) return false;
+  if (["attendance", "cargoAttendance", "fuel", "fuelStandard", "fuelPrices", "carWash", "driverSalaries", "payroll", "closedPayroll", "payrollDeductions"].includes(view) && ["admin", "ke_toan"].includes(state.currentUser?.role)) return true;
+  if (state.currentUser?.role === "admin") return true;
+  return (state.permissions.views || []).includes(view);
+}
+
+function canOperateOrders() {
+  return ["admin", "cskh"].includes(state.currentUser?.role);
+}
+
+function isPendingReopen(row) {
+  const status = normalize(row?.status || row?.trangThai);
+  return status === "cho duyet" || status === "pending";
+}
+
+function canExportReport(report) {
+  if (!report) return false;
+  return report.actions.some((action) => can(action));
+}
+
+function availableReportTypes() {
+  return reportTypes.filter((report) => canExportReport(report));
+}
+
+function selectedReportType() {
+  const value = els.reportTypeSelect?.value;
+  return reportTypes.find((report) => report.value === value) || availableReportTypes()[0] || null;
+}
+
+function updateReportControls() {
+  if (!els.reportTypeSelect) return;
+  const allowedReports = availableReportTypes();
+  const previousValue = els.reportTypeSelect.value;
+  els.reportTypeSelect.innerHTML = allowedReports
+    .map((report) => `<option value="${report.value}">${escapeHtml(report.label)}</option>`)
+    .join("");
+
+  if (allowedReports.some((report) => report.value === previousValue)) {
+    els.reportTypeSelect.value = previousValue;
+  }
+
+  const report = selectedReportType();
+  const hasReport = Boolean(report);
+  els.reportTypeSelect.disabled = !hasReport;
+  if (els.exportSelectedReportButton) {
+    els.exportSelectedReportButton.disabled = !hasReport;
+    els.exportSelectedReportButton.textContent = hasReport ? `Xuất ${report.label.toLowerCase()}` : "Không có quyền xuất báo cáo";
+  }
+  if (els.reportDescription) {
+    els.reportDescription.textContent = hasReport ? report.description : "Tài khoản này chưa được phân quyền xuất báo cáo.";
+  }
+  if (els.reportMetaList) {
+    els.reportMetaList.innerHTML = hasReport ? report.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("") : "";
+  }
+
+  const mode = report?.mode || "none";
+  if (els.reportMonthWrap) els.reportMonthWrap.hidden = mode !== "month";
+  if (els.reportFromWrap) els.reportFromWrap.hidden = mode !== "range";
+  if (els.reportToWrap) els.reportToWrap.hidden = mode !== "range";
+}
+
+function applyPermissions() {
+  document.querySelectorAll(".nav-item[data-view]").forEach((button) => {
+    const accountingDriverAreaView = button.dataset.view === "driverAreas" && isAccountingAppRole(state.currentUser?.role);
+    button.hidden = disabledViews.has(button.dataset.view) || (!accountingDriverAreaView && !canView(button.dataset.view));
+  });
+
+  document.querySelectorAll(".nav-group").forEach((group) => {
+    group.hidden = !group.querySelector(".nav-item[data-view]:not([hidden])");
+  });
+
+  const active = document.querySelector(".nav-item.active");
+  if (active?.hidden) {
+    const first = document.querySelector(".nav-item[data-view]:not([hidden])");
+    if (first) switchView(first.dataset.view);
+  }
+
+  const canEditData = can("edit_data");
+  const canManageBenefits = can("manage_benefits");
+  [
+    els.openCustomerDialogButton,
+    els.openContractDialogButton,
+    els.openFranchiseVehicleDialogButton,
+  ].forEach((button) => {
+    if (button) button.hidden = !canEditData;
+  });
+  if (els.openOrderDialogButton) els.openOrderDialogButton.hidden = !canOperateOrders();
+  document.querySelectorAll('[data-action="dashboard-new-order"]').forEach((button) => {
+    button.hidden = !canOperateOrders();
+  });
+  [els.openVoucherDialogButton, els.openVoucherBatchDialogButton, els.openPromotionDialogButton].forEach((button) => {
+    if (button) button.hidden = !canManageBenefits;
+  });
+
+  if (els.openUserDialogButton) els.openUserDialogButton.hidden = !can("manage_users");
+
+  if (els.exportDriverRemittanceButton) {
+    els.exportDriverRemittanceButton.hidden = !["reports_all", "reports_revenue", "export_excel"].some((action) =>
+      can(action),
+    );
+  }
+  updateReportControls();
+  if (els.exportInvoicesReportButton) {
+    els.exportInvoicesReportButton.hidden = !["reports_all", "export_invoices"].some((action) => can(action));
+  }
+  if (els.openInvoiceGroupDialogButton) {
+    els.openInvoiceGroupDialogButton.hidden = !can("create_invoice_groups");
+  }
+  const openDeductionButton = document.querySelector("#openDeductionDialog");
+  if (openDeductionButton) openDeductionButton.hidden = !can("manage_payroll_deductions");
+  const openDeductionTypeButton = document.querySelector("#openDeductionTypeDialog");
+  if (openDeductionTypeButton) openDeductionTypeButton.hidden = !can("manage_payroll_deductions");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function selectOptions(options, selectedValue, placeholder) {
+  const selectedText = String(selectedValue || "");
+  const values = selectedText && !options.includes(selectedText) ? [selectedText, ...options] : options;
+  return [
+    `<option value="">${escapeHtml(placeholder)}</option>`,
+    ...values.map((value) => `<option ${value === selectedText ? "selected" : ""}>${escapeHtml(value)}</option>`),
+  ].join("");
+}
+
+function matches(row, query) {
+  if (!query) return true;
+  const haystack = normalize(Object.values(row).join(" "));
+  return haystack.includes(normalize(query));
+}
+
+function invoiceOrderStatus(row) {
+  return String(row?.trangThaiHoaDon || "").trim() || "Chưa xuất";
+}
+
+function franchisePlateIsValid(value) {
+  return /^\d{2}[A-Z]-\d{3}\.\d{2}$/.test(String(value || "").trim().toUpperCase());
+}
+
+function localNowForInput() {
+  return formatDateTimeForInput(new Date());
+}
+
+function localDateForInput(date = new Date()) {
+  const localDate = new Date(date);
+  localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+  return localDate.toISOString().slice(0, 10);
+}
+
+function localMonthForInput(date = new Date()) {
+  return localDateForInput(date).slice(0, 7);
+}
+
+function formatMonthLabel(value) {
+  const text = String(value || "");
+  const [year, month] = text.split("-");
+  return year && month ? `Tháng ${month}/${year}` : "Tháng hiện tại";
+}
+
+function formatDate(value) {
+  const dateKey = rosterDateKey({ thoiGianTao: value });
+  return dateKey ? dateKey.split("-").reverse().join("/") : String(value || "");
+}
+
+function formatDateTime(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const date = parseDateTime(value);
+  if (!date || Number.isNaN(date.getTime())) return text;
+  return formatDateTimeForInput(date);
+}
+
+function formatDateTimeCell(value, fallback = "—") {
+  const formatted = formatDateTime(value) || fallback;
+  const match = String(formatted).match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})$/);
+  if (!match) return `<span class="date-time-value">${escapeHtml(formatted)}</span>`;
+  return `<span class="date-time-value"><strong>${escapeHtml(match[1])}</strong><small>${escapeHtml(match[2])}</small></span>`;
+}
+
+function formatTime(value) {
+  const date = parseDateTime(value);
+  if (!date) return "";
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatDateTimeForInput(value) {
+  const date = value instanceof Date ? value : parseDateTime(value);
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const pad = (number) => String(number).padStart(2, "0");
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function normalizeDateTimeInput(value) {
+  const date = parseDateTime(value);
+  if (!date) return "";
+  return formatDateTimeForInput(date);
+}
+
+function isCompleteDateTimeInput(value) {
+  const text = String(value || "").trim();
+  if (!/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}$/.test(text)) return false;
+  const date = parseDateTime(text);
+  return Boolean(date) && formatDateTimeForInput(date) === text;
+}
+
+function setDateTimeInputValidity(input) {
+  if (!input) return true;
+  const hasValue = Boolean(String(input.value || "").trim());
+  const missingRequiredValue = input.required && !hasValue;
+  const isValid = !missingRequiredValue && (!hasValue || isCompleteDateTimeInput(input.value));
+  input.classList.toggle("invalid", !isValid);
+  input.setCustomValidity(
+    isValid
+      ? ""
+      : missingRequiredValue
+        ? "Vui lòng nhập thời gian khởi hành dự kiến của đơn hàng."
+        : "Vui lòng nhập đủ ngày và giờ, ví dụ 17/07/2026 13:00.",
+  );
+  return isValid;
+}
+
+function validateDateTimeInputs(form) {
+  return [...form.querySelectorAll(".datetime-input")].every(setDateTimeInputValidity);
+}
+
+function formatDateTimeTyping(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 12);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  if (digits.length <= 10) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)} ${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)} ${digits.slice(8, 10)}:${digits.slice(10)}`;
+}
+
+function formatDateOnlyTyping(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function normalizeDateOnlyInput(value) {
+  const text = String(value || "").trim();
+  const digits = text.replace(/\D/g, "");
+  if (digits.length === 8) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  return text;
+}
+
+function nativeDateValue(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) return `${match[3]}-${String(match[2]).padStart(2, "0")}-${String(match[1]).padStart(2, "0")}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  return "";
+}
+
+function nativeDateTimeValue(value) {
+  const date = parseDateTime(value);
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const pad = (number) => String(number).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function dateFromNativeValue(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+}
+
+function dateTimeFromNativeValue(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return "";
+  const [, year, month, day, hour, minute] = match;
+  return `${day}/${month}/${year} ${hour}:${minute}`;
+}
+
+function emitInputChange(input) {
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function enhanceDateTimeControls(root = document) {
+  root.querySelectorAll(".date-input:not([data-picker-enhanced]), .datetime-input:not([data-picker-enhanced])").forEach((input) => {
+    const isDateTime = input.classList.contains("datetime-input");
+    input.dataset.pickerEnhanced = "1";
+
+    const wrapper = document.createElement("span");
+    wrapper.className = "date-picker-wrap";
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+
+    const nativePicker = document.createElement("input");
+    nativePicker.type = isDateTime ? "datetime-local" : "date";
+    nativePicker.className = "native-date-picker";
+    nativePicker.tabIndex = -1;
+    nativePicker.setAttribute("aria-hidden", "true");
+
+    const pickerButton = document.createElement("button");
+    pickerButton.type = "button";
+    pickerButton.className = `date-picker-button${isDateTime ? " datetime" : ""}`;
+    pickerButton.setAttribute("aria-label", isDateTime ? "Chọn ngày và giờ" : "Chọn ngày");
+    pickerButton.title = isDateTime ? "Chọn ngày và giờ" : "Chọn ngày";
+
+    pickerButton.innerHTML = isDateTime
+      ? `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><circle cx="16.5" cy="16.5" r="3.5"/><path d="M16.5 14.7v2l1.4.8"/></svg>`
+      : `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>`;
+
+    wrapper.append(nativePicker, pickerButton);
+
+    pickerButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      nativePicker.value = isDateTime ? nativeDateTimeValue(input.value) : nativeDateValue(input.value);
+      if (typeof nativePicker.showPicker === "function") nativePicker.showPicker();
+      else nativePicker.click();
+    });
+
+    nativePicker.addEventListener("change", () => {
+      const pickedValue = isDateTime ? dateTimeFromNativeValue(nativePicker.value) : dateFromNativeValue(nativePicker.value);
+      if (!pickedValue) return;
+      input.value = pickedValue;
+      emitInputChange(input);
+      input.focus();
+    });
+  });
+}
+
+function formatMoney(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "";
+  const amount = typeof value === "number" ? value : parseMoney(value);
+  return Number.isFinite(amount) ? Math.round(amount).toLocaleString("en-US") : "";
+}
+
+function parseMoney(value) {
+  const digits = String(value || "").replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
+}
+
+function orderNetAmount(order) {
+  if (order.thucThu !== undefined && String(order.thucThu || "").trim() !== "") return parseMoney(order.thucThu);
+  return Math.max(
+    parseMoney(order.giaTien) + parseMoney(order.phuThu) - parseMoney(order.giamGia)
+      - parseMoney(order.tongUuDai) + parseMoney(order.thueVAT) - parseMoney(order.daCoc),
+    0,
+  );
+}
+
+function orderRevenueAmount(order) {
+  return Math.max(parseMoney(order.giaTien) + parseMoney(order.phuThu) - parseMoney(order.giamGia) - parseMoney(order.tongUuDai), 0);
+}
+
+function orderVatAmount(order) {
+  return parseMoney(order.thueVAT);
+}
+
+function orderTotalPaymentAmount(order) {
+  return orderRevenueAmount(order) + orderVatAmount(order);
+}
+
+function invoiceFinancialAmounts(row) {
+  if (row.invoiceEntityType === "invoiceGroup") {
+    const vat = parseMoney(row.tongVAT);
+    const total = parseMoney(row.tongThanhToan) || parseMoney(row.giaTien);
+    const beforeVat = parseMoney(row.tongTruocVAT) || Math.max(total - vat, 0);
+    return { beforeVat, vat, total };
+  }
+  const beforeVat = orderRevenueAmount(row);
+  const vat = orderVatAmount(row);
+  const total = parseMoney(row.tongThanhToan) || beforeVat + vat;
+  return { beforeVat, vat, total };
+}
+
+function orderCommissionText(order) {
+  const rate = parseFloat(order.tyLeNopLai || "0");
+  return rate > 0 ? `${order.tyLeNopLai}% - ${formatMoney(order.soTienNopLai) || "0"}` : "";
+}
+
+function hasCommission(order) {
+  return parseFloat(order.tyLeNopLai || "0") > 0;
+}
+
+function orderIsFranchiseVehicle(order) {
+  return hasCommission(order) || normalize(order.loaiXeDieuDong).includes("thuong quyen");
+}
+
+function vehicleOwnershipLabel(order) {
+  if (!order?.bienKiemSoat) return "Chưa xác định";
+  return orderIsFranchiseVehicle(order) ? "Xe thương quyền hợp tác" : "Xe Công ty";
+}
+
+function vehicleSeatCount(order) {
+  const savedSeatCount = order?.soCho || order?.so_cho || "";
+  if (String(savedSeatCount).trim()) return String(savedSeatCount).trim().replace(/\s*chỗ\s*$/i, "");
+  const plate = normalize(order?.bienKiemSoat);
+  if (!plate) return "";
+  const rosterVehicle = uniqueRosterVehicles().find((row) => normalize(row.bienKiemSoat) === plate);
+  const franchiseVehicle = state.franchiseVehicles.find((row) => normalize(row.bienKiemSoat) === plate);
+  const seatCount =
+    rosterVehicle?.soCho ||
+    rosterVehicle?.so_cho ||
+    franchiseVehicle?.soCho ||
+    franchiseVehicle?.so_cho ||
+    "";
+  return String(seatCount).trim().replace(/\s*chỗ\s*$/i, "");
+}
+
+function orderDriverName(order) {
+  const savedDriverName = String(order?.hoTenLaiXe || "").trim();
+  if (savedDriverName) return savedDriverName;
+  const plate = normalize(order?.bienKiemSoat);
+  if (!plate) return "";
+  const rosterVehicle = uniqueRosterVehicles().find((row) => normalize(row.bienKiemSoat) === plate);
+  const franchiseVehicle = state.franchiseVehicles.find((row) => normalize(row.bienKiemSoat) === plate);
+  return String(
+    driverName(rosterVehicle || {}) ||
+      franchiseVehicle?.hoTenLaiXe ||
+      "",
+  ).trim();
+}
+
+function formatMoneyInput(input) {
+  input.value = formatMoney(input.value);
+}
+
+function shouldFormatAsMoney(input) {
+  const form = input.form;
+  if (input.name === "giaTri" && form?.elements?.loaiGiaTri?.value === "percent") return false;
+  return true;
+}
+
+function parseDateTime(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  const vietnamese = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (vietnamese) {
+    const [, day, month, year, hour, minute] = vietnamese;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const timeFirst = text.match(/^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (timeFirst) {
+    const [, hour, minute, day, month, year] = timeFirst;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = new Date(text.replace(" ", "T"));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function fallbackEnd(startValue) {
+  const start = parseDateTime(startValue);
+  if (!start) return "";
+  start.setHours(start.getHours() + 4);
+  return formatDateTimeForInput(start);
+}
+
+function overnightWindows(start, end) {
+  const windows = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1, 22, 0, 0, 0);
+  while (cursor < end) {
+    const windowStart = new Date(cursor);
+    const windowEnd = new Date(cursor);
+    windowEnd.setDate(windowEnd.getDate() + 1);
+    windowEnd.setHours(6, 0, 0, 0);
+    if (start < windowEnd && end > windowStart) {
+      const overlapStart = new Date(Math.max(start.getTime(), windowStart.getTime()));
+      const overlapEnd = new Date(Math.min(end.getTime(), windowEnd.getTime()));
+      windows.push({ windowStart, windowEnd, overlapStart, overlapEnd });
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return windows;
+}
+
+function renderOvernightCalculation(excludedWindowIndexes = new Set()) {
+  if (!els.overnightCalculatorResult) return;
+  const startValid = setDateTimeInputValidity(els.overnightStartInput);
+  const endValid = setDateTimeInputValidity(els.overnightEndInput);
+  if (!startValid || !endValid) {
+    els.overnightCalculatorResult.innerHTML = `<div class="form-alert error">Vui lòng nhập đúng định dạng dd/MM/yyyy hh:mm.</div>`;
+    return;
+  }
+  const start = parseDateTime(els.overnightStartInput.value);
+  const end = parseDateTime(els.overnightEndInput.value);
+  if (!start || !end || end <= start) {
+    els.overnightEndInput.classList.add("invalid");
+    els.overnightEndInput.setCustomValidity("Ngày giờ đến phải sau ngày giờ đi.");
+    els.overnightCalculatorResult.innerHTML = `<div class="form-alert error">Ngày giờ đến phải sau ngày giờ đi.</div>`;
+    return;
+  }
+  els.overnightEndInput.setCustomValidity("");
+  els.overnightEndInput.classList.remove("invalid");
+  const freeWaitHours = Number(els.overnightFreeWaitInput?.value);
+  const movingHours = Number(els.overnightMovingHoursInput?.value);
+  if (!Number.isFinite(freeWaitHours) || freeWaitHours < 0 || !Number.isFinite(movingHours) || movingHours < 0) {
+    els.overnightCalculatorResult.innerHTML = `<div class="form-alert error">Tổng giờ chờ miễn phí và tổng giờ xe di chuyển phải là số từ 0 trở lên.</div>`;
+    return;
+  }
+  const totalUsageHours = (end.getTime() - start.getTime()) / 3600000;
+  const windows = overnightWindows(start, end);
+  const selectedWindows = windows.filter((_, index) => !excludedWindowIndexes.has(index));
+  const totalOvernightHours = selectedWindows.reduce(
+    (total, item) => total + (item.overlapEnd.getTime() - item.overlapStart.getTime()) / 3600000,
+    0,
+  );
+  const billableWaitHours = totalUsageHours - movingHours - freeWaitHours - totalOvernightHours;
+  if (billableWaitHours < -0.000001) {
+    els.overnightCalculatorResult.innerHTML = `<div class="form-alert error">Tổng giờ xe di chuyển, giờ chờ miễn phí và giờ lưu đêm không được lớn hơn tổng giờ sử dụng xe (${totalUsageHours.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} giờ).</div>`;
+    return;
+  }
+  const normalizedBillableHours = Math.max(billableWaitHours, 0);
+  const waitingFee = Math.round(normalizedBillableHours * 50000);
+  const overnightFee = selectedWindows.length * 500000;
+  const totalFee = waitingFee + overnightFee;
+  const hourText = (value) => value.toLocaleString("vi-VN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const rows = windows.map((item, index) => `
+    <tr class="${excludedWindowIndexes.has(index) ? "overnight-window-excluded" : ""}">
+      <td>${index + 1}</td>
+      <td><label class="overnight-window-toggle"><input type="checkbox" data-overnight-window-index="${index}" ${excludedWindowIndexes.has(index) ? "" : "checked"} /><span>${excludedWindowIndexes.has(index) ? "Không tính" : "Có tính"}</span></label></td>
+      <td>${escapeHtml(formatDateTimeForInput(item.windowStart))}</td>
+      <td>${escapeHtml(formatDateTimeForInput(item.windowEnd))}</td>
+      <td>${escapeHtml(formatDateTimeForInput(item.overlapStart))} – ${escapeHtml(formatDateTimeForInput(item.overlapEnd))}</td>
+      <td><strong>${hourText((item.overlapEnd.getTime() - item.overlapStart.getTime()) / 3600000)} giờ</strong></td>
+    </tr>
+  `).join("");
+  els.overnightCalculatorResult.innerHTML = `
+    <div class="overnight-result-summary">
+      <div class="overnight-result-card"><span>Tổng giờ sử dụng xe</span><strong>${hourText(totalUsageHours)}</strong><small>giờ</small></div>
+      <div class="overnight-result-card"><span>Tổng giờ lưu đêm</span><strong>${hourText(totalOvernightHours)}</strong><small>giờ</small></div>
+      <div class="overnight-result-card"><span>Giờ chờ tính phí</span><strong>${hourText(normalizedBillableHours)}</strong><small>giờ</small></div>
+      <div class="overnight-result-card"><span>Số đêm lưu</span><strong>${selectedWindows.length} đêm</strong><small>${hourText(totalOvernightHours)} giờ lưu đêm</small></div>
+      <div class="overnight-result-card total"><span>Tổng chi phí</span><strong>${formatMoney(totalFee)}</strong><small>đ</small></div>
+    </div>
+    <div class="overnight-cost-breakdown">
+      <span>Phí giờ chờ: <strong>${formatMoney(waitingFee)} đ</strong></span>
+      <span>Phí lưu đêm: <strong>${formatMoney(overnightFee)} đ</strong></span>
+    </div>
+    ${windows.length ? `<div class="table-wrap"><table><thead><tr><th>STT</th><th>Tính lưu đêm</th><th>Bắt đầu khung đêm</th><th>Kết thúc khung đêm</th><th>Thời gian hành trình phát sinh</th><th>Số giờ lưu đêm</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">Hành trình không phát sinh thời gian trong khung 22:00–06:00.</div>`}
+  `;
+}
+
+function orderIsDone(order) {
+  const status = normalize(order.trangThai);
+  return Boolean(order.ngayGioHoanThanh) || status === "da hoan thanh" || status === "hoan thanh";
+}
+
+function orderIsCancelled(order) {
+  const status = normalize(order.trangThai);
+  return status.includes("huy");
+}
+
+function orderRange(order) {
+  const start = parseDateTime(order.ngayGioDi);
+  if (!start) return null;
+  const end = parseDateTime(order.ngayGioHoanThanh) || parseDateTime(order.ngayGioDuKienKetThuc) || new Date(start.getTime() + 4 * 60 * 60 * 1000);
+  return { start, end };
+}
+
+function rangesOverlap(leftStart, leftEnd, rightStart, rightEnd) {
+  return leftStart < rightEnd && leftEnd > rightStart;
+}
+
+function orderConflicts(order, plate, startValue, endValue, excludeOrderId = "") {
+  if (String(order.id) === String(excludeOrderId) || orderIsCancelled(order) || normalize(order.bienKiemSoat) !== normalize(plate)) return false;
+  const currentStart = parseDateTime(startValue);
+  const currentEnd = parseDateTime(endValue);
+  const existing = orderRange(order);
+  if (!currentStart || !currentEnd || !existing) return true;
+  return rangesOverlap(existing.start, existing.end, currentStart, currentEnd);
+}
+
+function conflictingOrder(plate, startValue, endValue, excludeOrderId = "") {
+  return state.orders.find((order) => orderConflicts(order, plate, startValue, endValue, excludeOrderId));
+}
+
+function driverText(row) {
+  return row.hoTenMSNVLaiXe || row.hoTenNhanVienLaiXe || "";
+}
+
+function driverName(row) {
+  return driverText(row).split(" - ", 1)[0] || "";
+}
+
+function hasRosterDriver(row) {
+  return driverText(row).trim() !== "";
+}
+
+function parseRosterDate(row) {
+  const text = String(row.thoiGianTao || "").trim();
+  const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1])).getTime();
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function rosterDateKey(row) {
+  const time = parseRosterDate(row);
+  if (!time) return "";
+  const date = new Date(time);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
+function isRosterOnShift(row) {
+  return normalize(row.trangThaiLenXuongCa).includes("len ca");
+}
+
+function betterRosterRow(current, candidate) {
+  if (!current) return candidate;
+  const currentOnShift = isRosterOnShift(current);
+  const candidateOnShift = isRosterOnShift(candidate);
+  if (candidateOnShift !== currentOnShift) return candidateOnShift ? candidate : current;
+  return parseRosterDate(candidate) >= parseRosterDate(current) ? candidate : current;
+}
+
+function uniqueRosterVehicles() {
+  const map = new Map();
+  for (const row of state.roster) {
+    const plate = String(row.bienKiemSoat || "").trim();
+    if (plate) map.set(plate, betterRosterRow(map.get(plate), row));
+  }
+  return [...map.values()];
+}
+
+function rosterVehiclesForDate(dateKey, requireDriver = false) {
+  const map = new Map();
+  for (const row of state.roster) {
+    const plate = String(row.bienKiemSoat || "").trim();
+    if (!plate || !isRosterOnShift(row) || rosterDateKey(row) !== dateKey) continue;
+    if (requireDriver && !hasRosterDriver(row)) continue;
+    map.set(plate, betterRosterRow(map.get(plate), row));
+  }
+  return [...map.values()];
+}
+
+function rosterVehiclesForStart(startValue) {
+  const start = parseDateTime(startValue);
+  return start ? rosterVehiclesForDate(localDateForInput(start)) : [];
+}
+
+function activeFranchiseVehicles() {
+  return state.franchiseVehicles.filter((row) => !normalize(row.trangThai).includes("ngung"));
+}
+
+function franchiseVehicleByPlate(plate) {
+  return activeFranchiseVehicles().find((row) => normalize(row.bienKiemSoat) === normalize(plate));
+}
+
+function selectedVehicleKind() {
+  return els.orderVehicleSelect.selectedOptions[0]?.dataset.vehicleKind || "";
+}
+
+function switchView(view) {
+  if (disabledViews.has(view)) view = "orders";
+  state.activeView = view || "dashboard";
+  document.querySelectorAll(".view").forEach((section) => section.classList.remove("active"));
+  document.querySelector(`#${view}View`)?.classList.add("active");
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+  const [title, hint] = pageMeta[view] || pageMeta.dashboard;
+  els.pageTitle.textContent = title;
+  els.pageHint.textContent = hint;
+  if (view === "calendar") renderCalendar();
+  if (view === "reports") updateReportControls();
+  if (view === "attendance") applyAttendanceType(document.querySelector("#attendanceViewType")?.value || "travel");
+  if (view === "cargoAttendance") applyAttendanceType("cargo");
+  if (view === "fuel") loadFuelRecords(false);
+  if (view === "fuelStandard") loadFuelStandardView(false);
+  if (view === "fuelPrices") loadFuelPricesView(false);
+  if (view === "carWash") loadCarWashRecords(false);
+  if (view === "driverSalaries") loadDriverSalaries();
+  if (view === "driverAreas") loadDriverAreas();
+  if (view === "payroll") loadPayroll(false);
+  if (view === "closedPayroll") loadClosedPayroll(false);
+  if (view === "payrollDeductions") loadPayrollDeductions(false);
+  if (view === "cskhShiftReports") syncCskhShiftForm();
+  if (state.currentUser) loadData(state.activeView, false);
+}
+
+async function fetchJson(url, options = {}, timeoutMs = 30000) {
+  const method = String(options.method || "GET").toUpperCase();
+  const canRetry = method === "GET" || method === "HEAD";
+  // Login is read-only from the sheet's perspective (it only creates a
+  // short-lived session after credentials are verified), so retry a transient
+  // Google Sheet timeout once just like GET requests.
+  const maxAttempts = canRetry || url === "/api/proxy/login" ? 2 : 1;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const headers = { ...(options.headers || {}) };
+      if (state.authToken) headers.Authorization = `Bearer ${state.authToken}`;
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: "same-origin",
+        signal: controller.signal,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401 && url !== "/api/proxy/login") {
+        clearAuth(payload.detail || "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        throw new Error(payload.detail || "Phiên đăng nhập đã hết hạn.");
+      }
+      if (response.status === 403 && String(payload.detail || "").includes("Ứng dụng này chỉ dành")) {
+        clearAuth(payload.detail);
+        const error = new Error(payload.detail);
+        error.status = response.status;
+        throw error;
+      }
+      if (!response.ok) {
+        const error = new Error(payload.detail || "Có lỗi xảy ra");
+        error.status = response.status;
+        throw error;
+      }
+      return payload;
+    } catch (error) {
+      lastError = error;
+      const aborted = error.name === "AbortError" || String(error.message || "").toLowerCase().includes("aborted");
+      const transientStatus = [429, 500, 502, 503, 504].includes(Number(error.status));
+      if (attempt < maxAttempts && (aborted || transientStatus)) {
+        await new Promise((resolve) => window.setTimeout(resolve, 800 * attempt));
+        continue;
+      }
+      if (aborted) {
+        throw new Error("Google Sheet đang phản hồi chậm. Hệ thống đã tự thử lại nhưng chưa nhận được dữ liệu; vui lòng thử lại sau ít phút.");
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  throw lastError || new Error("Không thể tải dữ liệu.");
+}
+
+function parseDateOnly(value) {
+  const nativeValue = nativeDateValue(value);
+  if (!nativeValue) return null;
+  const [year, month, day] = nativeValue.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function orderDateKey(order) {
+  const range = orderRange(order);
+  return range ? localDateForInput(range.start) : "";
+}
+
+function dateKeyInRange(value, fromValue, toValue) {
+  const dateKey = nativeDateValue(value);
+  const from = nativeDateValue(fromValue);
+  const to = nativeDateValue(toValue);
+  return Boolean(dateKey) && (!from || dateKey >= from) && (!to || dateKey <= to);
+}
+
+function reportDateRange(fromInput, toInput) {
+  const from = nativeDateValue(fromInput?.value || "") || localDateForInput();
+  const to = nativeDateValue(toInput?.value || "") || from;
+  if (from > to) {
+    window.alert("Từ ngày không được lớn hơn đến ngày.");
+    return null;
+  }
+  return { from, to };
+}
+
+function orderRouteLabel(order) {
+  return order.tuyen || [order.diemDon, order.diemTra].filter(Boolean).join(" - ") || "Chưa có tuyến";
+}
+
+function sumBy(rows, getter) {
+  return rows.reduce((total, row) => total + Number(getter(row) || 0), 0);
+}
+
+function topGroups(rows, keyGetter, valueGetter, limit = 4) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    const key = keyGetter(row) || "Chưa phân loại";
+    const current = groups.get(key) || { label: key, count: 0, value: 0 };
+    current.count += 1;
+    current.value += Number(valueGetter(row) || 0);
+    groups.set(key, current);
+  });
+  return [...groups.values()].sort((a, b) => b.value - a.value || b.count - a.count).slice(0, limit);
+}
+
+function renderMoneyStack(container, rows) {
+  if (!container) return;
+  container.innerHTML = rows
+    .map(
+      (row) => `
+        <div class="money-row ${row.accent || ""}">
+          <span>${escapeHtml(row.label)}</span>
+          <strong>${escapeHtml(formatMoney(row.value) || "0")}</strong>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderAlertList(container, rows) {
+  if (!container) return;
+  container.innerHTML = rows.length
+    ? rows
+        .map(
+          (row) => `
+            <button class="alert-item" data-action="${escapeHtml(row.action || "")}" type="button">
+              <strong>${escapeHtml(row.value)}</strong>
+              <span>${escapeHtml(row.label)}</span>
+            </button>
+          `,
+        )
+        .join("")
+    : `<div class="empty compact-empty">Không có việc gấp cần xử lý.</div>`;
+}
+
+function renderRankList(container, rows) {
+  if (!container) return;
+  container.innerHTML = rows.length
+    ? rows
+        .map(
+          (row, index) => `
+            <div class="rank-row">
+              <span>${index + 1}</span>
+              <div>
+                <strong>${escapeHtml(row.label)}</strong>
+                <small>${escapeHtml(row.count)} đơn · ${escapeHtml(formatMoney(row.value) || "0")}</small>
+              </div>
+            </div>
+          `,
+        )
+        .join("")
+    : `<div class="empty compact-empty">Chưa có dữ liệu.</div>`;
+}
+
+function renderRevenueBars(container, rows) {
+  if (!container) return;
+  const maxValue = Math.max(...rows.map((row) => row.value), 1);
+  container.innerHTML = rows
+    .map((row) => {
+      const height = Math.max(Math.round((row.value / maxValue) * 100), row.value ? 8 : 2);
+      const tooltipText = row.tooltipLines?.length ? row.tooltipLines.join("\n") : row.tooltip;
+      const tooltip = row.tooltipLines?.length
+        ? `<span class="mini-bar-tooltip">${row.tooltipLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}</span>`
+        : row.tooltip
+          ? `<span class="mini-bar-tooltip">${escapeHtml(row.tooltip)}</span>`
+        : "";
+      return `
+        <div class="mini-bar" title="${escapeHtml(tooltipText || `${row.label}: ${formatMoney(row.value) || "0"}`)}">
+          <div class="mini-bar-track"><span style="height:${height}%"></span></div>
+          <strong>${escapeHtml(row.label)}</strong>
+          <small>${escapeHtml(formatMoney(row.value) || "0")}</small>
+          ${tooltip}
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function customerSourceForOrder(order) {
+  if (order.nguonKhach) return order.nguonKhach;
+  const phone = normalizePhone(order.soDienThoai);
+  return state.customers.find((customer) => normalizePhone(customer.soDienThoai) === phone)?.nguonKhach || "";
+}
+
+function monthDateKeys(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const days = new Date(year, month + 1, 0).getDate();
+  return Array.from({ length: days }, (_, index) => {
+    const current = new Date(year, month, index + 1);
+    return {
+      key: localDateForInput(current),
+      label: String(index + 1).padStart(2, "0"),
+    };
+  });
+}
+
+function renderDashboard() {
+  const now = new Date();
+  const selectedKey = state.filters.dashboardDate || localDateForInput(now);
+  const selectedDate = parseDateOnly(selectedKey) || now;
+  const dayStart = parseDateTime(`${selectedKey} 00:00`);
+  const dayEnd = parseDateTime(`${selectedKey} 23:59`);
+  const selectedOrders = state.orders.filter((order) => orderDateKey(order) === selectedKey && !orderIsCancelled(order));
+  const selectedVehicles = rosterVehiclesForDate(selectedKey);
+  const availableSelected = selectedVehicles.filter((vehicle) => {
+    const plate = normalize(vehicle.bienKiemSoat);
+    return !state.orders.some((order) => {
+      const range = orderRange(order);
+      return (
+        plate &&
+        range &&
+        !orderIsCancelled(order) &&
+        normalize(order.bienKiemSoat) === plate &&
+        rangesOverlap(range.start, range.end, dayStart, dayEnd)
+      );
+    });
+  });
+  const selectedRevenue = sumBy(selectedOrders, orderRevenueAmount);
+  const selectedNet = sumBy(selectedOrders, orderNetAmount);
+  const selectedDeposit = sumBy(selectedOrders, (order) => parseMoney(order.daCoc));
+  const monthBars = monthDateKeys(selectedDate).map((dateItem) => {
+    const dayOrders = state.orders.filter((order) => orderDateKey(order) === dateItem.key && !orderIsCancelled(order));
+    const companyOrders = dayOrders.filter((order) => !orderIsFranchiseVehicle(order));
+    const franchiseOrders = dayOrders.filter(orderIsFranchiseVehicle);
+    const value = sumBy(dayOrders, orderRevenueAmount);
+    const companyValue = sumBy(companyOrders, orderRevenueAmount);
+    const franchiseValue = sumBy(franchiseOrders, orderRevenueAmount);
+    return {
+      label: dateItem.label,
+      value,
+      tooltipLines: [
+        `${formatDate(dateItem.key)} - Tổng ${dayOrders.length} cuốc - ${formatMoney(value) || "0"}`,
+        `Xe công ty: ${companyOrders.length} cuốc - ${formatMoney(companyValue) || "0"}`,
+        `Xe thương quyền: ${franchiseOrders.length} cuốc - ${formatMoney(franchiseValue) || "0"}`,
+      ],
+      tooltip: `${formatDate(dateItem.key)} · ${dayOrders.length} đơn · ${formatMoney(value) || "0"}`,
+    };
+  });
+  const monthOrders = state.orders.filter((order) => {
+    const key = orderDateKey(order);
+    return key && key.slice(0, 7) === selectedKey.slice(0, 7) && !orderIsCancelled(order);
+  });
+  const monthRevenue = sumBy(monthOrders, orderRevenueAmount);
+  const topSources = topGroups(monthOrders, customerSourceForOrder, orderRevenueAmount);
+  const topRegions = topGroups(monthOrders, (order) => order.khuVucDatXe, orderRevenueAmount);
+
+  if (els.dashboardDateFilter && els.dashboardDateFilter.value !== selectedKey) els.dashboardDateFilter.value = selectedKey;
+  if (els.dashboardTodayLabel) els.dashboardTodayLabel.textContent = formatDate(selectedKey);
+  if (els.dashboardMonthRevenueTitle) {
+    els.dashboardMonthRevenueTitle.textContent = `Doanh thu tháng ${String(selectedDate.getMonth() + 1).padStart(2, "0")}/${selectedDate.getFullYear()}`;
+  }
+  if (els.dashboardMonthRevenueTotal) {
+    const selectedMonthLabel = String(selectedDate.getMonth() + 1).padStart(2, "0") + "/" + selectedDate.getFullYear();
+    const monthRevenueText = String(formatMoney(monthRevenue) || "0").replaceAll(".", ",");
+    els.dashboardMonthRevenueTotal.innerHTML = "TỔNG DOANH THU THÁNG " + selectedMonthLabel + ": <span class=\"month-revenue-amount\">" + monthRevenueText + "đ</span>";
+  }
+  els.customerCount.textContent = state.customers.length;
+  els.contractCount.textContent = state.contracts.length;
+  els.openOrderCount.textContent = selectedOrders.length;
+  els.doneOrderCount.textContent = selectedOrders.filter(orderIsDone).length;
+  els.vehicleCount.textContent = selectedVehicles.length;
+  els.availableVehicleCount.textContent = availableSelected.length;
+  renderMoneyStack(els.dashboardMoneySummary, [
+    { label: "Doanh thu ngày xem", value: selectedRevenue, accent: "strong" },
+    { label: "Thực thu sau ưu đãi", value: selectedNet },
+    { label: "Khách đã cọc", value: selectedDeposit },
+    { label: "Còn phải thu", value: Math.max(selectedNet - selectedDeposit, 0) },
+  ]);
+  renderRevenueBars(els.dashboardMonthRevenueBars, monthBars);
+  renderRankList(els.dashboardTopSources, topSources);
+  renderRankList(els.dashboardRegions, topRegions);
+}
+
+function renderCustomers() {
+  const rows = state.customers.filter((row) => matches(row, state.filters.customer));
+  els.customerTable.innerHTML =
+    rows
+      .map(
+        (row) => `
+          <tr data-detail-type="customer" data-id="${escapeHtml(row.id)}">
+            <td><strong>${escapeHtml(row.id || "")}</strong></td>
+            <td><strong>${escapeHtml(row.tenKhach)}</strong></td>
+            <td>${escapeHtml(row.soDienThoai)}</td>
+            <td>${escapeHtml(row.soCCCD || "")}</td>
+            <td>${escapeHtml(row.diaChi || "")}</td>
+            <td>${escapeHtml(row.loaiKhachHang || "")}</td>
+            <td>${escapeHtml(row.namSinh)}</td>
+            <td>${escapeHtml(row.gioiTinh)}</td>
+            <td>${escapeHtml(row.nguonKhach)}</td>
+            <td>${escapeHtml(row.nhanVienNhap)}</td>
+          </tr>
+        `,
+      )
+      .join("") || `<tr><td colspan="10" class="empty">Chưa có khách hàng.</td></tr>`;
+}
+
+function renderContracts() {
+  const rows = state.contracts.filter((row) => matches(row, state.filters.contract));
+  els.contractTable.innerHTML =
+    rows
+      .map(
+        (row, index) => `
+          <tr data-detail-type="contract" data-id="${escapeHtml(row.id)}">
+            <td>${index + 1}</td>
+            <td>${escapeHtml(row.diemDi || "")}</td>
+            <td>${escapeHtml(row.diemDen || "")}</td>
+            <td><strong>${escapeHtml(row.tuyen)}</strong></td>
+            <td>${escapeHtml(row.ghiChu)}</td>
+          </tr>
+        `,
+      )
+      .join("") || `<tr><td colspan="5" class="empty">Chưa có hợp đồng/tuyến.</td></tr>`;
+}
+
+function pricingRangeText(minValue, maxValue, unit = "km") {
+  if (maxValue === null || maxValue === undefined || maxValue === "") return `Từ ${formatNumber(minValue)} ${unit}`;
+  return `${formatNumber(minValue)} - ${formatNumber(maxValue)} ${unit}`;
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(Number(value) || 0);
+}
+
+function contractWaitText(amount) {
+  const tier = (state.contractPricing?.waiting || []).find((row) => {
+    const max = row.maxAmount;
+    return amount >= Number(row.minAmount || 0) && (max === null || max === undefined || max === "" || amount <= Number(max));
+  });
+  const minutes = Number(tier?.minutes || 0);
+  if (!minutes) return "Không áp dụng";
+  if (minutes < 60) return `${minutes} phút`;
+  const hours = Math.floor(minutes / 60);
+  const remain = minutes % 60;
+  return remain ? `${hours} giờ ${remain} phút` : `${hours} giờ`;
+}
+
+function pricingCell(value, group, rowIndex, key, editable, suffix = "") {
+  const unit = suffix ? `<span class="pricing-cell-unit">${escapeHtml(suffix.trim())}</span>` : "";
+  if (!editable) return `<span class="pricing-cell-value">${formatNumber(value)}${unit}</span>`;
+  return `<span class="pricing-input-group"><input class="pricing-cell-input" type="number" min="0" step="1" value="${escapeHtml(value)}" data-pricing-group="${group}" data-pricing-row="${rowIndex}" data-pricing-key="${key}" aria-label="${escapeHtml(key)}" />${unit}</span>`;
+}
+
+function calculateContractPricing() {
+  if (!els.contractPricingResults) return;
+  const km = Number(els.contractPricingKm?.value || 0);
+  const weekendMultiplier = els.contractPricingWeekend?.checked ? 1.1 : 1;
+  if (!state.contractPricing || !Number.isFinite(km) || km <= 0) {
+    els.contractPricingResults.innerHTML = `<div class="empty">Nhập kilomet để xem báo giá.</div>`;
+    return;
+  }
+  const oneWayTier = (state.contractPricing.oneWay || []).find((row) => km >= Number(row.minKm || 0) && (row.maxKm === null || row.maxKm === undefined || row.maxKm === "" || km <= Number(row.maxKm)));
+  const roundTripTier = (state.contractPricing.roundTrip || []).find((row) => km >= Number(row.minKm || 0) && (row.maxKm === null || row.maxKm === undefined || row.maxKm === "" || km <= Number(row.maxKm)));
+  if (!oneWayTier || !roundTripTier) {
+    els.contractPricingResults.innerHTML = `<div class="empty">Chưa có cấu hình phù hợp cho ${formatNumber(km)} km.</div>`;
+    return;
+  }
+  const vehiclePrices = [
+    { seat: "4", label: "Xe 4 chỗ", vehicleMultiplier: 1 },
+    { seat: "7", label: "Xe 7 chỗ", vehicleMultiplier: 1 },
+    { seat: "7", label: "Xe Innova", vehicleMultiplier: 1.15 },
+    { seat: "16", label: "Xe 16 chỗ", vehicleMultiplier: 1 },
+  ];
+  els.contractPricingResults.innerHTML = vehiclePrices.map(({ seat, label, vehicleMultiplier }) => {
+    const rate = Number(oneWayTier.rates?.[seat] || 0);
+    // Chuyến ngắn 1-19 km không giảm chiều về: chiều về bằng 100% chiều đi.
+    const returnPercent = km <= 19 ? 100 : Number(roundTripTier.percentages?.[seat] || 0);
+    const baseOneWay = Math.max(0, km * rate * vehicleMultiplier);
+    const oneWay = Math.round(baseOneWay * weekendMultiplier);
+    const roundTripKm = km * 2;
+    const roundTrip = Math.max(0, Math.round(baseOneWay * (100 + returnPercent) / 100 * weekendMultiplier));
+    return `<article class="pricing-result-card">
+      <h3>${label}</h3>
+      <dl>
+        <div><dt>Đơn giá</dt><dd>${formatMoney(rate * vehicleMultiplier)} / km</dd></div>
+        <div><dt>Giá 1 chiều (${formatNumber(km)} km)</dt><dd>${formatMoney(oneWay)}</dd></div>
+        <div><dt>Giá 2 chiều (${formatNumber(roundTripKm)} km)</dt><dd>${formatMoney(roundTrip)}</dd></div>
+        ${vehicleMultiplier > 1 ? `<div><dt>Phụ thu dòng Innova</dt><dd>+15% giá xe 7 chỗ</dd></div>` : ""}
+        <div><dt>Phụ thu cuối tuần</dt><dd>${weekendMultiplier > 1 ? "+10%" : "Không áp dụng"}</dd></div>
+        <div><dt>Chiều về</dt><dd>${formatNumber(returnPercent)}% giá chiều đi</dd></div>
+        <div><dt>Chờ miễn phí</dt><dd>2 chiều: ${contractWaitText(roundTrip)}</dd></div>
+      </dl>
+    </article>`;
+  }).join("");
+}
+
+function renderContractPricing() {
+  if (!els.oneWayPricingTable) return;
+  const config = state.contractPricing;
+  const editable = String(state.currentUser?.role || "").trim().toLowerCase() === "admin";
+  if (els.saveContractPricingButton) els.saveContractPricingButton.hidden = !editable;
+  if (els.contractPricingSetup) els.contractPricingSetup.hidden = false;
+  if (els.contractPricingStatus) els.contractPricingStatus.hidden = !editable;
+  if (!config) {
+    els.oneWayPricingTable.innerHTML = `<tr><td colspan="4" class="empty">Đang tải bảng giá...</td></tr>`;
+    els.roundTripPricingTable.innerHTML = `<tr><td colspan="4" class="empty">Đang tải bảng giá...</td></tr>`;
+    els.waitingPricingTable.innerHTML = `<tr><td colspan="2" class="empty">Đang tải bảng giá...</td></tr>`;
+    calculateContractPricing();
+    return;
+  }
+  els.oneWayPricingTable.innerHTML = (config.oneWay || []).map((row, index) => `<tr>
+    <td><strong>${pricingRangeText(row.minKm, row.maxKm)}</strong></td>
+    ${["4", "7", "16"].map((seat) => `<td>${pricingCell(row.rates?.[seat] || 0, "oneWay", index, seat, editable, "đ/km")}</td>`).join("")}
+  </tr>`).join("");
+  els.roundTripPricingTable.innerHTML = (config.roundTrip || []).map((row, index) => `<tr>
+    <td><strong>${pricingRangeText(row.minKm, row.maxKm)}</strong></td>
+    ${["4", "7", "16"].map((seat) => `<td>${pricingCell(row.percentages?.[seat] || 0, "roundTrip", index, seat, editable, "%")}</td>`).join("")}
+  </tr>`).join("");
+  els.waitingPricingTable.innerHTML = (config.waiting || []).map((row, index) => `<tr>
+    <td><strong>${pricingRangeText(row.minAmount, row.maxAmount, "đ")}</strong></td>
+    <td>${pricingCell(row.minutes || 0, "waiting", index, "minutes", editable, " phút")}</td>
+  </tr>`).join("");
+  calculateContractPricing();
+}
+
+function benefitValueText(row) {
+  const value = row.loaiGiaTri === "percent" ? `${row.giaTri}%` : formatMoney(row.giaTri);
+  return value || "0";
+}
+
+function benefitKey(row, kind) {
+  if (kind === "voucher") return String(row.maVoucher || row.id || "");
+  return String(row.id || row.tenChuongTrinh || "");
+}
+
+function benefitIsSelectable(row) {
+  return ["con han", "dang ap dung"].some((text) => normalize(row.trangThaiSuDung || row.trangThaiHieuLuc || row.trangThai).includes(text));
+}
+
+function calculateBenefitDiscount(row, baseAmount, remainingCap = baseAmount) {
+  const value = Number(String(row.giaTri || "0").replace(",", "."));
+  if (!Number.isFinite(value) || value <= 0 || baseAmount <= 0 || remainingCap <= 0) return 0;
+  const rawDiscount = row.loaiGiaTri === "percent" ? Math.round((baseAmount * value) / 100) : parseMoney(row.giaTri);
+  return Math.min(remainingCap, rawDiscount);
+}
+
+function selectedBenefitRows(kind) {
+  const ids = new Set(kind === "voucher" ? state.orderBenefits.voucherIds : state.orderBenefits.promotionIds);
+  const rows = kind === "voucher" ? state.vouchers : state.promotions;
+  return rows.filter((row) => ids.has(benefitKey(row, kind)));
+}
+
+function orderBaseAmountPreview() {
+  if (selectedContractType() === "xe_ghep") {
+    return [...els.sharedPassengerList.querySelectorAll('[data-passenger-field="soTien"]')].reduce((total, input) => total + parseMoney(input.value), 0);
+  }
+  return parseMoney(els.orderForm.elements.giaTien?.value);
+}
+
+function selectedRowsByIds(rows, ids, kind = "voucher") {
+  const selectedIds = new Set(ids.map(String));
+  return rows.filter((row) => selectedIds.has(benefitKey(row, kind)));
+}
+
+function sharedPassengerPaymentPreview() {
+  const usedVouchers = new Set();
+  const voucherRows = [];
+  const promotionRows = [];
+  let baseAmount = 0;
+  let manualDiscount = 0;
+  let voucherDiscount = 0;
+  let promotionDiscount = 0;
+  let surcharge = 0;
+  let deposit = 0;
+  let vatAmount = 0;
+
+  for (const passenger of collectSharedPassengers()) {
+    const passengerBase = Number(passenger.soTien || 0);
+    const passengerManual = Math.min(Number(passenger.giamGia || 0), passengerBase);
+    const passengerSurcharge = Number(passenger.phuThu || 0);
+    let remaining = Math.max(passengerBase - passengerManual, 0);
+    baseAmount += passengerBase;
+    manualDiscount += passengerManual;
+    surcharge += passengerSurcharge;
+
+    for (const voucher of selectedRowsByIds(state.vouchers, passenger.voucherIds || [], "voucher")) {
+      const key = benefitKey(voucher, "voucher");
+      if (usedVouchers.has(key)) continue;
+      const discount = calculateBenefitDiscount(voucher, passengerBase, remaining);
+      voucherDiscount += discount;
+      remaining = Math.max(remaining - discount, 0);
+      voucherRows.push(voucher);
+      usedVouchers.add(key);
+    }
+    for (const promotion of selectedRowsByIds(state.promotions, passenger.promotionIds || [], "promotion")) {
+      const discount = calculateBenefitDiscount(promotion, passengerBase, remaining);
+      promotionDiscount += discount;
+      remaining = Math.max(remaining - discount, 0);
+      promotionRows.push(promotion);
+    }
+    remaining += passengerSurcharge;
+    const passengerVat = passenger.yeuCauHoaDon ? Math.round(remaining * 0.08) : 0;
+    vatAmount += passengerVat;
+    deposit += Math.min(Number(passenger.daCoc || 0), remaining + passengerVat);
+  }
+
+  return { baseAmount, manualDiscount, surcharge, voucherRows, promotionRows, voucherDiscount, promotionDiscount, deposit, vatAmount };
+}
+
+function calculateOrderPaymentPreview() {
+  const isShared = selectedContractType() === "xe_ghep";
+  const sharedPreview = isShared ? sharedPassengerPaymentPreview() : null;
+  const baseAmount = sharedPreview ? sharedPreview.baseAmount : orderBaseAmountPreview();
+  const manualDiscount = sharedPreview ? sharedPreview.manualDiscount : Math.min(parseMoney(els.orderForm.elements.giamGia?.value), baseAmount);
+  let remaining = Math.max(baseAmount - manualDiscount, 0);
+  const voucherRows = sharedPreview ? sharedPreview.voucherRows : selectedBenefitRows("voucher");
+  const promotionRows = sharedPreview ? sharedPreview.promotionRows : selectedBenefitRows("promotion");
+  const voucherDiscount = sharedPreview
+    ? sharedPreview.voucherDiscount
+    : voucherRows.reduce((total, row) => {
+        const discount = calculateBenefitDiscount(row, baseAmount, remaining);
+        remaining = Math.max(remaining - discount, 0);
+        return total + discount;
+      }, 0);
+  const promotionDiscount = sharedPreview
+    ? sharedPreview.promotionDiscount
+    : promotionRows.reduce((total, row) => {
+        const discount = calculateBenefitDiscount(row, baseAmount, remaining);
+        remaining = Math.max(remaining - discount, 0);
+        return total + discount;
+      }, 0);
+  const benefitDiscount = voucherDiscount + promotionDiscount;
+  const totalBenefit = manualDiscount + benefitDiscount;
+  const surcharge = sharedPreview ? sharedPreview.surcharge : parseMoney(els.orderForm.elements.phuThu?.value);
+  const revenueAfterDiscount = Math.max(baseAmount - manualDiscount - benefitDiscount, 0) + surcharge;
+  const vatAmount = sharedPreview ? sharedPreview.vatAmount : els.invoiceToggle?.checked ? Math.round(revenueAfterDiscount * 0.08) : 0;
+  const totalPayment = revenueAfterDiscount + vatAmount;
+  const deposit = sharedPreview ? sharedPreview.deposit : Math.min(parseMoney(els.orderForm.elements.daCoc?.value), totalPayment);
+  const commissionRate = 0;
+  const commissionAmount = commissionRate > 0 ? Math.round((revenue * commissionRate) / 100) : 0;
+  return {
+    baseAmount,
+    manualDiscount,
+    voucherRows,
+    promotionRows,
+    voucherDiscount,
+    promotionDiscount,
+    totalBenefit,
+    surcharge,
+    benefitDiscount,
+    revenue: revenueAfterDiscount,
+    vatAmount,
+    totalPayment,
+    deposit,
+    commissionRate,
+    commissionAmount,
+    netAmount: Math.max(totalPayment - deposit, 0),
+  };
+}
+
+function benefitSummaryText(rows) {
+  return rows.length ? rows.map((row) => benefitTitle(row, row.maVoucher ? "voucher" : "promotion")).join(", ") : "Không áp dụng";
+}
+
+function updateOrderPaymentSummary() {
+  if (!els.orderPaymentSummary) return;
+  const summary = calculateOrderPaymentPreview();
+  els.orderPaymentSummary.innerHTML = `
+    <div class="summary-total">
+      <span>Thực thu sau ưu đãi</span>
+      <strong>${escapeHtml(formatMoney(summary.revenue)) || "0"}</strong>
+    </div>
+    <div class="summary-grid">
+      <div><span>Giá tiền / doanh thu</span><strong>${escapeHtml(formatMoney(summary.baseAmount)) || "0"}</strong></div>
+      <div><span>Giảm giá thủ công</span><strong>${escapeHtml(formatMoney(summary.manualDiscount)) || "0"}</strong></div>
+      <div><span>Voucher</span><strong>${escapeHtml(formatMoney(summary.voucherDiscount)) || "0"}</strong><small>${escapeHtml(benefitSummaryText(summary.voucherRows))}</small></div>
+      <div><span>Khuyến mãi</span><strong>${escapeHtml(formatMoney(summary.promotionDiscount)) || "0"}</strong><small>${escapeHtml(benefitSummaryText(summary.promotionRows))}</small></div>
+      <div><span>Tổng ưu đãi</span><strong>${escapeHtml(formatMoney(summary.totalBenefit)) || "0"}</strong></div>
+      <div><span>Phụ thu</span><strong>${escapeHtml(formatMoney(summary.surcharge)) || "0"}</strong></div>
+      <div><span>Thuế VAT (8%)</span><strong>${escapeHtml(formatMoney(summary.vatAmount)) || "0"}</strong></div>
+      <div><span>Tổng thanh toán</span><strong>${escapeHtml(formatMoney(summary.totalPayment)) || "0"}</strong></div>
+      <div><span>Khách đã cọc</span><strong>${escapeHtml(formatMoney(summary.deposit)) || "0"}</strong></div>
+      ${
+        summary.commissionRate > 0
+          ? `<div class="commission"><span>Xe thương quyền nộp về</span><strong>${escapeHtml(formatMoney(summary.commissionAmount)) || "0"}</strong><small>${escapeHtml(summary.commissionRate)}% trên thực thu sau ưu đãi</small></div>`
+          : ""
+      }
+      <div class="net"><span>Còn phải thu</span><strong>${escapeHtml(formatMoney(summary.netAmount)) || "0"}</strong></div>
+    </div>
+  `;
+}
+
+function voucherCampaignName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+#\d{3,}$/, "");
+}
+
+function voucherCampaigns() {
+  return [...new Set(state.vouchers.map((row) => voucherCampaignName(row.tenVoucher)).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "vi"),
+  );
+}
+
+function renderVoucherCampaignFilter() {
+  if (!els.voucherCampaignFilter) return;
+  const selected = state.filters.voucherCampaign || "";
+  const campaigns = voucherCampaigns();
+  els.voucherCampaignFilter.innerHTML = [
+    `<option value="">Tất cả chiến dịch</option>`,
+    ...campaigns.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`),
+  ].join("");
+  if (selected && campaigns.includes(selected)) {
+    els.voucherCampaignFilter.value = selected;
+  } else {
+    state.filters.voucherCampaign = "";
+  }
+}
+
+function renderVouchers() {
+  renderVoucherCampaignFilter();
+  const rows = state.vouchers
+    .filter((row) => matches(row, state.filters.voucher))
+    .filter((row) => !state.filters.voucherCampaign || voucherCampaignName(row.tenVoucher) === state.filters.voucherCampaign)
+    .sort(
+      (a, b) =>
+        voucherCampaignName(a.tenVoucher).localeCompare(voucherCampaignName(b.tenVoucher), "vi") ||
+        String(a.maVoucher || "").localeCompare(String(b.maVoucher || ""), "vi"),
+    );
+  els.voucherTable.innerHTML =
+    rows
+      .map(
+        (row, index) => `
+          <tr data-detail-type="voucher" data-id="${escapeHtml(row.id)}">
+            <td><input class="voucher-print-checkbox" type="checkbox" data-voucher-print-id="${escapeHtml(row.id)}" aria-label="Chọn in voucher ${escapeHtml(row.maVoucher)}" ${state.selectedVoucherIds.has(String(row.id)) ? "checked" : ""} /></td>
+            <td>${index + 1}</td>
+            <td><strong>${escapeHtml(row.maVoucher)}</strong></td>
+            <td>${escapeHtml(voucherCampaignName(row.tenVoucher))}</td>
             <td>${escapeHtml(benefitValueText(row))}</td>
             <td>${escapeHtml(row.ngayBatDau || row.ngayHetHan ? [row.ngayBatDau, row.ngayHetHan || "Không giới hạn"].filter(Boolean).join(" - ") : "Không giới hạn")}</td>
             <td><span class="pill ${normalize(row.trangThaiSuDung).includes("da su dung") ? "done" : benefitIsSelectable(row) ? "running" : "cancelled"}">${escapeHtml(row.trangThaiSuDung || row.trangThai || "")}</span></td>
@@ -2182,6 +4209,7 @@ function resetDriverSalaryForm() {
   form.dataset.editing="";
   document.querySelector("#salaryEffectiveMonth").value=localMonthForInput();
   document.querySelector("#salaryBaseAmount").value="0";
+  document.querySelector("#salaryLunchBreakHours").value="0";
   document.querySelector("#salaryDialogTitle").textContent="Thêm khai báo lương";
   form.querySelector('button[type="submit"]').textContent="Lưu mức lương";
   document.querySelector("#allowanceManager").hidden=true;
@@ -2215,7 +4243,7 @@ function renderDriverSalaries() {
   document.querySelectorAll(".salary-allowance-type").forEach(allowanceSelect=>{const value=allowanceSelect.value;allowanceSelect.innerHTML=salaryAllowanceOptions(value);});
   const keyword=normalize(state.filters.driverSalary||search?.value||"");
   const rows=(state.driverSalaries.rows||[]).filter(row=>!keyword||normalize([row.employeeCode,row.employeeName,row.bankName,row.accountNumber,row.accountHolder,row.effectiveMonth].join(" ")).includes(keyword));
-  table.innerHTML=rows.map(row=>{const allowances=salaryAllowancesForRow(row),allowanceTotal=allowances.reduce((sum,item)=>sum+salaryNumber(item.amount),0);return `<tr><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td>${escapeHtml(row.employeeName)}</td><td>${escapeHtml(row.effectiveMonth)}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${escapeHtml(row.accountHolder)}</td><td>${formatMoney(row.baseSalary)}</td><td><div class="salary-allowance-list">${allowances.map(item=>`<div class="salary-allowance-line"><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join("")||"—"}</div></td><td><strong>${formatMoney(allowanceTotal)}</strong></td><td><strong>${formatMoney(salaryNumber(row.baseSalary)+allowanceTotal)}</strong></td><td>${escapeHtml(row.createdBy||"")}</td><td><div class="row-actions"><button class="small secondary" data-action="edit-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Sửa</button><button class="small danger" data-action="delete-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Xóa</button></div></td></tr>`;}).join("")||`<tr><td colspan="12" class="empty">${keyword?"Không tìm thấy khai báo lương phù hợp.":"Chưa có khai báo lương."}</td></tr>`;
+  table.innerHTML=rows.map(row=>{const allowances=salaryAllowancesForRow(row),allowanceTotal=allowances.reduce((sum,item)=>sum+salaryNumber(item.amount),0);return `<tr><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td>${escapeHtml(row.employeeName)}</td><td>${escapeHtml(row.effectiveMonth)}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${escapeHtml(row.accountHolder)}</td><td>${formatMoney(row.baseSalary)}</td><td class="salary-lunch-cell"><span class="salary-lunch-badge">${Number(row.lunchBreakHours||0).toLocaleString("vi-VN")} giờ</span></td><td><div class="salary-allowance-list">${allowances.map(item=>`<div class="salary-allowance-line"><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join("")||"—"}</div></td><td><strong>${formatMoney(allowanceTotal)}</strong></td><td><strong>${formatMoney(salaryNumber(row.baseSalary)+allowanceTotal)}</strong></td><td>${escapeHtml(row.createdBy||"")}</td><td><div class="row-actions"><button class="small secondary" data-action="edit-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Sửa</button><button class="small danger" data-action="delete-salary" data-code="${escapeHtml(row.employeeCode)}" data-month="${escapeHtml(row.effectiveMonth)}" type="button">Xóa</button></div></td></tr>`;}).join("")||`<tr><td colspan="13" class="empty">${keyword?"Không tìm thấy khai báo lương phù hợp.":"Chưa có khai báo lương."}</td></tr>`;
   if(!document.querySelector("#salaryEffectiveMonth")?.value) document.querySelector("#salaryEffectiveMonth").value=localMonthForInput();
   updateSalaryTotalPreview();
   renderAllowanceTypes();
@@ -2223,7 +4251,7 @@ function renderDriverSalaries() {
 
 async function loadDriverSalaries() {
   try { const [salaries,types]=await Promise.all([fetchJson("/api/proxy/accounting/driver-salaries",{},90000),fetchJson("/api/proxy/accounting/allowance-types",{},90000)]); state.driverSalaries=salaries; state.allowanceTypes=types.rows||[]; renderDriverSalaries(); }
-  catch(error) { const table=document.querySelector("#driverSalaryTable"); if(table) table.innerHTML=`<tr><td colspan="12" class="empty">${escapeHtml(error.message||"Không thể tải khai báo lương.")}</td></tr>`; }
+  catch(error) { const table=document.querySelector("#driverSalaryTable"); if(table) table.innerHTML=`<tr><td colspan="13" class="empty">${escapeHtml(error.message||"Không thể tải khai báo lương.")}</td></tr>`; }
 }
 
 function renderDriverAreas() {
@@ -2314,12 +4342,12 @@ async function saveDriverSalary(event) {
     return;
   }
   const allowances=salaryAllowancesFromForm();
-  const bankName=document.querySelector("#salaryBankName"),accountNumber=document.querySelector("#salaryAccountNumber"),accountHolder=document.querySelector("#salaryAccountHolder"),effectiveMonth=document.querySelector("#salaryEffectiveMonth"),baseAmount=document.querySelector("#salaryBaseAmount");
-  if (!bankName || !accountNumber || !accountHolder || !effectiveMonth || !baseAmount) {
+  const bankName=document.querySelector("#salaryBankName"),accountNumber=document.querySelector("#salaryAccountNumber"),accountHolder=document.querySelector("#salaryAccountHolder"),effectiveMonth=document.querySelector("#salaryEffectiveMonth"),baseAmount=document.querySelector("#salaryBaseAmount"),lunchBreakHours=document.querySelector("#salaryLunchBreakHours");
+  if (!bankName || !accountNumber || !accountHolder || !effectiveMonth || !baseAmount || !lunchBreakHours) {
     alert("Biểu mẫu khai báo lương chưa tải đầy đủ. Vui lòng tải lại trang.");
     return;
   }
-  const payload={employeeCode:select.value,employeeName:option.dataset?.name||"",bankName:bankName.value.trim(),accountNumber:accountNumber.value.trim(),accountHolder:accountHolder.value.trim(),effectiveMonth:effectiveMonth.value,baseSalary:salaryNumber(baseAmount.value),allowances,allowanceType:allowances[0]?.type||"Khác",allowance:allowances.reduce((sum,item)=>sum+item.amount,0)};
+  const payload={employeeCode:select.value,employeeName:option.dataset?.name||"",bankName:bankName.value.trim(),accountNumber:accountNumber.value.trim(),accountHolder:accountHolder.value.trim(),effectiveMonth:effectiveMonth.value,baseSalary:salaryNumber(baseAmount.value),lunchBreakHours:Math.max(0,Math.min(24,Number(lunchBreakHours.value)||0)),allowances,allowanceType:allowances[0]?.type||"Khác",allowance:allowances.reduce((sum,item)=>sum+item.amount,0)};
   const button=form.querySelector('button[type="submit"]');
   if (!button) return;
   button.disabled=true;
@@ -2410,6 +4438,7 @@ async function manageSalaryRow(event) {
     document.querySelector("#salaryAccountNumber").value=row.accountNumber||"";
     document.querySelector("#salaryAccountHolder").value=row.accountHolder||"";
     document.querySelector("#salaryBaseAmount").value=formatMoney(row.baseSalary||0);
+    document.querySelector("#salaryLunchBreakHours").value=Number(row.lunchBreakHours||0);
     setSalaryAllowances(salaryAllowancesForRow(row));
     const form=document.querySelector("#driverSalaryForm"); form.dataset.editing="true"; form.querySelector('button[type="submit"]').textContent="Cập nhật mức lương";
     document.querySelector("#salaryDialogTitle").textContent=`Sửa lương · ${row.employeeName}`;
@@ -2745,6 +4774,7 @@ document.querySelector("#salaryDriverSelect")?.addEventListener("change",event=>
   document.querySelector("#salaryAccountNumber").value=latest.accountNumber||"";
   document.querySelector("#salaryAccountHolder").value=latest.accountHolder||selectedName.toUpperCase();
   document.querySelector("#salaryBaseAmount").value=formatMoney(latest.baseSalary||0);
+  document.querySelector("#salaryLunchBreakHours").value=Number(latest.lunchBreakHours||0);
   setSalaryAllowances(salaryAllowancesForRow(latest));
   updateSalaryTotalPreview();
 });
@@ -2786,9 +4816,9 @@ function renderPayroll() {
   const orderedDeductionTypes=orderDeductionTypes(deductionTypes);
   const allowanceAmount=(row,type)=>salaryAllowancesForRow(row).filter(item=>(String(item.type||"Khác").trim()||"Khác")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
   const deductionAmount=(row,type)=>(row.deductions||[]).filter(item=>(String(item.type||"Khoản trừ").trim()||"Khoản trừ")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
-  const columns=["STT","Mã NV","Họ và tên","Công chuẩn","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ","Ghi chú",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?["Số ngày còn phép trong tháng","Tiền thưởng ngày công tăng ca"]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Thao tác"];
+  const columns=["STT","Mã NV","Họ và tên","Công chuẩn","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ","Ghi chú",...(isCargo?["Giờ nghỉ trưa/ngày","Giờ tăng ca tính lương","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?["Số ngày còn phép trong tháng","Tiền thưởng ngày công tăng ca"]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Thao tác"];
   head.innerHTML=`<tr>${columns.map(label=>`<th>${escapeHtml(label)}</th>`).join("")}</tr>`;
-  body.innerHTML=rows.map((row,index)=>`<tr class="payroll-driver-row" data-code="${escapeHtml(row.employeeCode)}"><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button payroll-driver-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td>${row.requiredDays}</td><td><strong>${row.workDays}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell"><input class="payroll-deduction-input" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" data-type="${escapeHtml(type)}" value="${escapeHtml(deductionAmount(row,type)?formatMoney(deductionAmount(row,type)):"")}" placeholder="0" inputmode="numeric" ${payload.locked?"disabled":""} aria-label="${escapeHtml(type)} của ${escapeHtml(row.employeeName)}" /></td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td><td class="payroll-note-cell"><input class="payroll-note-input" data-code="${escapeHtml(row.employeeCode)}" value="${escapeHtml(row.payrollNote||"")}" placeholder="Ghi chú (nếu là Khác)..." maxlength="500" ${payload.locked?"disabled":""} aria-label="Ghi chú của ${escapeHtml(row.employeeName)}" /></td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?`<td><strong>${row.remainingLeaveDays||0}</strong></td><td class="money">${formatMoney(row.extraWorkdayBonus)}</td>`:`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td>${row.salaryDeclared?"":`<button class="small payroll-declare-salary" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" type="button">Khai báo ngay</button>`}</td></tr>`).join("")||`<tr><td colspan="${columns.length}" class="empty">Không có dữ liệu tài xế trong tháng này.</td></tr>`;
+  body.innerHTML=rows.map((row,index)=>`<tr class="payroll-driver-row" data-code="${escapeHtml(row.employeeCode)}"><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button payroll-driver-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td>${row.requiredDays}</td><td><strong>${row.workDays}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell"><input class="payroll-deduction-input" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" data-type="${escapeHtml(type)}" value="${escapeHtml(deductionAmount(row,type)?formatMoney(deductionAmount(row,type)):"")}" placeholder="0" inputmode="numeric" ${payload.locked?"disabled":""} aria-label="${escapeHtml(type)} của ${escapeHtml(row.employeeName)}" /></td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td><td class="payroll-note-cell"><input class="payroll-note-input" data-code="${escapeHtml(row.employeeCode)}" value="${escapeHtml(row.payrollNote||"")}" placeholder="Ghi chú (nếu là Khác)..." maxlength="500" ${payload.locked?"disabled":""} aria-label="Ghi chú của ${escapeHtml(row.employeeName)}" /></td>${isCargo?`<td>${Number(row.lunchBreakHours||0).toLocaleString("vi-VN")} giờ</td><td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?`<td><strong>${row.remainingLeaveDays||0}</strong></td><td class="money">${formatMoney(row.extraWorkdayBonus)}</td>`:`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td>${row.salaryDeclared?"":`<button class="small payroll-declare-salary" data-code="${escapeHtml(row.employeeCode)}" data-name="${escapeHtml(row.employeeName)}" type="button">Khai báo ngay</button>`}</td></tr>`).join("")||`<tr><td colspan="${columns.length}" class="empty">Không có dữ liệu tài xế trong tháng này.</td></tr>`;
   const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0),deductionTotal=rows.reduce((sum,row)=>sum+salaryNumber(row.totalDeduction),0),bonus=formatMoney(payload.bonusAmount||0),holidayBonus=formatMoney(payload.holidayBonusTotal||0),extraWorkdayBonus=formatMoney(payload.extraWorkdayBonusTotal||0),revenueBonus=formatMoney(payload.travelRevenueBonusTotal||0),fuelBonus=formatMoney(payload.fuelSavingBonusTotal||0),fuelCharge=formatMoney(payload.fuelOveruseChargeTotal||0);
   summary.textContent=`${isCargo?"Xe Hàng":"Travel"} · Công chuẩn ${payload.requiredDays||0} ngày · ${isCargo?"Thưởng đủ công theo chức vụ":`Thưởng đủ công ${bonus}`} · ${payload.holidays?.length||0} ngày lễ · Thưởng ngày lễ ${holidayBonus}${isCargo?` · Thưởng ngày công tăng ca ${extraWorkdayBonus}`:` · Thưởng doanh thu ${payload.travelRevenueBonusRate||10}% ${revenueBonus} · Thưởng tiết kiệm xăng ${fuelBonus} · Thu vượt định mức ${fuelCharge}`} · Khoản trừ ${formatMoney(deductionTotal)} · ${rows.length} tài xế · Tổng lương ${formatMoney(total)}${payload.locked ? " · ĐÃ CHỐT LƯƠNG" : ""}`;
 }
@@ -2951,7 +4981,7 @@ function openClosedPayrollDetail(code) {
   const deductions=Array.isArray(row.deductions)?row.deductions:[];
   content.innerHTML=`<div class="payroll-detail-layout"><div class="payroll-detail-info">
     <div class="payroll-detail-identity"><strong>${escapeHtml(row.employeeName||"")}</strong><span>${escapeHtml(row.employeeCode||"")} · ${payload.viewType==="cargo"?"Xe Hàng":"Lái xe Travel"}</span></div>
-    <div class="payroll-detail-grid">${detail("Tháng",payload.month)}${detail("Công thực tế",row.workDays||0)}${detail("Lương cơ bản",formatMoney(row.baseSalary),"money")}${detail("Tổng phụ cấp",formatMoney(row.totalAllowance),"money")}${detail("Tổng khoản trừ",formatMoney(row.totalDeduction),"money")}${payload.viewType==="cargo"?`${detail("Giờ tăng ca",payrollOvertimeText(row.overtimeMinutes))}${detail("Tiền tăng ca",formatMoney(row.overtimePay),"money")}${detail("Số ngày còn phép trong tháng",row.remainingLeaveDays||0)}${detail("Tiền thưởng ngày công tăng ca",formatMoney(row.extraWorkdayBonus),"money")}`:""}${detail("Thưởng đủ công",formatMoney(row.attendanceBonus),"money")}${detail("Ngày lễ đi làm",row.holidayWorkDays||0)}${detail("Thưởng ngày lễ",formatMoney(row.holidayBonus),"money")}${payload.viewType!=="cargo"?`${detail("Doanh thu tháng",formatMoney(row.travelRevenue),"money")}${detail("Thưởng doanh thu 10%",formatMoney(row.travelRevenueBonus),"money")}${detail("Thưởng tiết kiệm xăng",formatMoney(row.fuelSavingBonus),"money")}${detail("Thu vượt định mức",formatMoney(row.fuelOveruseCharge),"money")}`:""}${detail("Tổng lương",formatMoney(row.totalSalary),"money")}</div>
+    <div class="payroll-detail-grid">${detail("Tháng",payload.month)}${detail("Công thực tế",row.workDays||0)}${detail("Lương cơ bản",formatMoney(row.baseSalary),"money")}${detail("Tổng phụ cấp",formatMoney(row.totalAllowance),"money")}${detail("Tổng khoản trừ",formatMoney(row.totalDeduction),"money")}${payload.viewType==="cargo"?`${detail("Giờ nghỉ trưa/ngày",`${Number(row.lunchBreakHours||0).toLocaleString("vi-VN")} giờ`)}${detail("Giờ tăng ca tính lương",payrollOvertimeText(row.overtimeMinutes))}${detail("Tiền tăng ca",formatMoney(row.overtimePay),"money")}${detail("Số ngày còn phép trong tháng",row.remainingLeaveDays||0)}${detail("Tiền thưởng ngày công tăng ca",formatMoney(row.extraWorkdayBonus),"money")}`:""}${detail("Thưởng đủ công",formatMoney(row.attendanceBonus),"money")}${detail("Ngày lễ đi làm",row.holidayWorkDays||0)}${detail("Thưởng ngày lễ",formatMoney(row.holidayBonus),"money")}${payload.viewType!=="cargo"?`${detail("Doanh thu tháng",formatMoney(row.travelRevenue),"money")}${detail("Thưởng doanh thu 10%",formatMoney(row.travelRevenueBonus),"money")}${detail("Thưởng tiết kiệm xăng",formatMoney(row.fuelSavingBonus),"money")}${detail("Thu vượt định mức",formatMoney(row.fuelOveruseCharge),"money")}`:""}${detail("Tổng lương",formatMoney(row.totalSalary),"money")}</div>
     <h3>Các khoản phụ cấp</h3><div class="payroll-detail-allowances">${allowances.length?allowances.map(item=>`<div><span>${escapeHtml(item.type||"Khác")}</span><strong>${formatMoney(item.amount)}</strong></div>`).join(""):"<span class=\"muted\">Không có phụ cấp</span>"}</div>
     <h3>Các khoản trừ</h3><div class="payroll-detail-allowances payroll-detail-deductions">${deductions.length?deductions.map(item=>`<div><span>${escapeHtml(item.type||"Khoản trừ")}${item.note?`<small class=\"muted\">${escapeHtml(item.note)}</small>`:""}</span><strong>${formatMoney(item.amount)}</strong></div>`).join(""):"<span class=\"muted\">Không có khoản trừ</span>"}</div>
     <h3>Thông tin nhận lương</h3><div class="payroll-detail-grid">${detail("Ngân hàng",row.bankName)}${detail("Số tài khoản",row.accountNumber)}${detail("Chủ tài khoản",row.accountHolder)}${detail("Trạng thái",transferred?"Đã chuyển lương":"Chưa chuyển")}${transferred?detail("Người xác nhận",row.transferredBy||""):""}${transferred?detail("Thời gian",row.transferredAt?new Date(row.transferredAt).toLocaleString("vi-VN"):""):""}</div>
@@ -2981,13 +5011,13 @@ function renderClosedPayroll() {
   [...knownDeductionTypes,...rows.flatMap(row=>(row.deductions||[]).map(item=>String(item.type||"Khoản trừ").trim()||"Khoản trừ"))].forEach(type=>{if(type&&!deductionTypes.includes(type))deductionTypes.push(type);});
   const orderedDeductionTypes=orderDeductionTypes(deductionTypes);
   const deductionAmount=(row,type)=>(row.deductions||[]).filter(item=>(String(item.type||"Khoản trừ").trim()||"Khoản trừ")===type).reduce((sum,item)=>sum+salaryNumber(item.amount),0);
-  const columns=["STT","Mã NV","Họ và tên","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ",...(isCargo?["Giờ tăng ca","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?["Số ngày còn phép trong tháng","Tiền thưởng ngày công tăng ca"]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Ghi chú","Ngân hàng","Số tài khoản","QR nhận lương","Trạng thái chuyển","Người xác nhận","Thao tác"];
+  const columns=["STT","Mã NV","Họ và tên","Công thực tế","Lương cơ bản",...allowanceTypes,"Tổng phụ cấp",...orderedDeductionTypes,"Tổng khoản trừ",...(isCargo?["Giờ nghỉ trưa/ngày","Giờ tăng ca tính lương","Tiền tăng ca"]:[]),"Thưởng đủ công","Ngày lễ đi làm","Thưởng ngày lễ",...(isCargo?["Số ngày còn phép trong tháng","Tiền thưởng ngày công tăng ca"]:["Doanh thu tháng","Thưởng doanh thu 10%","Thưởng tiết kiệm xăng","Thu vượt định mức"]),"Tổng lương","Ghi chú","Ngân hàng","Số tài khoản","QR nhận lương","Trạng thái chuyển","Người xác nhận","Thao tác"];
   head.innerHTML=`<tr>${columns.map(label=>`<th>${escapeHtml(label)}</th>`).join("")}</tr>`;
   body.innerHTML=rows.map((row,index)=>{
     const qr=closedPayrollQrUrl(row,payload.month);
     const transferred=row.remittanceStatus==="transferred";
     const transferredAt=row.transferredAt?new Date(row.transferredAt).toLocaleString("vi-VN"):"";
-    return `<tr><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td><strong>${row.workDays||0}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell">${formatMoney(deductionAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td>${isCargo?`<td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?`<td><strong>${row.remainingLeaveDays||0}</strong></td><td class="money">${formatMoney(row.extraWorkdayBonus)}</td>`:`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td class="payroll-note-cell">${escapeHtml(row.payrollNote||"")}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${qr?`<img class="payroll-qr" src="${escapeHtml(qr)}" alt="QR nhận lương ${escapeHtml(row.employeeName)}" loading="lazy" />`:`<span class="muted">Chưa đủ thông tin</span>`}</td><td>${transferred?`<span class="payroll-transfer-status done">Đã chuyển</span>`:`<span class="payroll-transfer-status pending">Chưa chuyển</span>`}</td><td>${escapeHtml(row.transferredBy||"")}<small class="muted">${escapeHtml(transferredAt)}</small></td><td><div class="row-actions"><button class="small secondary closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">Chi tiết</button>${transferred?`<span class="muted">Đã xác nhận</span>`:`<button class="small closed-payroll-transfer" data-code="${escapeHtml(row.employeeCode)}" type="button">Đã chuyển lương</button>`}</div></td></tr>`;
+    return `<tr><td>${index+1}</td><td><strong>${escapeHtml(row.employeeCode)}</strong></td><td><button class="link-button closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">${escapeHtml(row.employeeName)}</button></td><td><strong>${row.workDays||0}</strong></td><td class="money">${formatMoney(row.baseSalary)}</td>${allowanceTypes.map(type=>`<td class="money">${formatMoney(allowanceAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalAllowance)}</td>${orderedDeductionTypes.map(type=>`<td class="money payroll-deduction-cell">${formatMoney(deductionAmount(row,type))}</td>`).join("")}<td class="money">${formatMoney(row.totalDeduction)}</td>${isCargo?`<td>${Number(row.lunchBreakHours||0).toLocaleString("vi-VN")} giờ</td><td>${payrollOvertimeText(row.overtimeMinutes)}</td><td class="money">${formatMoney(row.overtimePay)}</td>`:""}<td class="money">${formatMoney(row.attendanceBonus)}</td><td><strong>${row.holidayWorkDays||0}</strong></td><td class="money payroll-holiday-bonus">${formatMoney(row.holidayBonus)}</td>${isCargo?`<td><strong>${row.remainingLeaveDays||0}</strong></td><td class="money">${formatMoney(row.extraWorkdayBonus)}</td>`:`<td class="money">${formatMoney(row.travelRevenue)}</td><td class="money">${formatMoney(row.travelRevenueBonus)}</td><td class="money">${formatMoney(row.fuelSavingBonus)}</td><td class="money">${formatMoney(row.fuelOveruseCharge)}</td>`}<td class="money salary-total-cell">${formatMoney(row.totalSalary)}</td><td class="payroll-note-cell">${escapeHtml(row.payrollNote||"")}</td><td>${escapeHtml(row.bankName)}</td><td>${escapeHtml(row.accountNumber)}</td><td>${qr?`<img class="payroll-qr" src="${escapeHtml(qr)}" alt="QR nhận lương ${escapeHtml(row.employeeName)}" loading="lazy" />`:`<span class="muted">Chưa đủ thông tin</span>`}</td><td>${transferred?`<span class="payroll-transfer-status done">Đã chuyển</span>`:`<span class="payroll-transfer-status pending">Chưa chuyển</span>`}</td><td>${escapeHtml(row.transferredBy||"")}<small class="muted">${escapeHtml(transferredAt)}</small></td><td><div class="row-actions"><button class="small secondary closed-payroll-detail" data-code="${escapeHtml(row.employeeCode)}" type="button">Chi tiết</button>${transferred?`<span class="muted">Đã xác nhận</span>`:`<button class="small closed-payroll-transfer" data-code="${escapeHtml(row.employeeCode)}" type="button">Đã chuyển lương</button>`}</div></td></tr>`;
   }).join("")||`<tr><td colspan="${columns.length}" class="empty">Bảng lương đã chốt chưa có dòng dữ liệu.</td></tr>`;
   const transferredCount=rows.filter(row=>row.remittanceStatus==="transferred").length;
   const total=rows.reduce((sum,row)=>sum+salaryNumber(row.totalSalary),0);
