@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kế toán Đi Xanh</title>
-    <link rel="stylesheet" href="/legacy/styles.css?v=travel-holiday-rule-20261002-1" />
+    <link rel="stylesheet" href="/legacy/styles.css?v=salary-lunch-column-20261010-1" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen">
@@ -82,7 +82,7 @@
               <button class="nav-item" data-view="customers" type="button">Khách hàng</button>
               <button class="nav-item" data-view="contracts" type="button">Hợp đồng/tuyến</button>
               <button class="nav-item" data-view="contractPricing" type="button">Tra cứu giá hợp đồng</button>
-              <button class="nav-item" data-view="overnightCalculator" type="button">Tính chi phí sử dụng xe</button>
+              <button class="nav-item" data-view="overnightCalculator" data-feature-disabled="true" type="button" hidden>Tính chi phí sử dụng xe</button>
               <button class="nav-item" data-view="vouchers" type="button">Voucher</button>
               <button class="nav-item" data-view="promotions" type="button">Khuyến mãi</button>
               <button class="nav-item" data-view="invoiceOrders" type="button">Hóa đơn</button>
@@ -225,7 +225,7 @@
           </div>
         </section>
 
-        <section id="overnightCalculatorView" class="view">
+        <section id="overnightCalculatorView" class="view" hidden aria-hidden="true">
           <div class="panel overnight-calculator-panel">
             <div class="panel-title">
               <div>
@@ -510,7 +510,7 @@
               <div><h2>Khai báo lương lái xe</h2><p>Mỗi mức lương được lưu theo tháng hiệu lực để bảo toàn bảng lương quá khứ.</p></div>
               <div class="salary-list-actions"><input id="driverSalarySearch" class="search-input salary-list-search" type="search" placeholder="Tìm tên lái xe, mã NV, ngân hàng..." aria-label="Tìm kiếm khai báo lương" /><button id="openSalaryDialog" type="button">+ Thêm</button></div>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Mã NV</th><th>Họ và tên</th><th>Tháng áp dụng</th><th>Ngân hàng</th><th>Số tài khoản</th><th>Chủ tài khoản</th><th>Lương cơ bản</th><th>Các khoản phụ cấp</th><th>Tổng phụ cấp</th><th>Tổng lương</th><th>Người khai báo</th><th>Thao tác</th></tr></thead><tbody id="driverSalaryTable"></tbody></table></div>
+            <div class="table-wrap salary-declaration-table-wrap"><table class="salary-declaration-table"><thead><tr><th>Mã NV</th><th>Họ và tên</th><th>Tháng áp dụng</th><th>Ngân hàng</th><th>Số tài khoản</th><th>Chủ tài khoản</th><th>Lương cơ bản</th><th>Giờ nghỉ trưa/ngày</th><th>Các khoản phụ cấp</th><th>Tổng phụ cấp</th><th>Tổng lương</th><th>Người khai báo</th><th>Thao tác</th></tr></thead><tbody id="driverSalaryTable"></tbody></table></div>
             <dialog id="salaryDialog" class="salary-dialog">
               <div class="dialog-panel salary-dialog-panel">
                 <div class="salary-dialog-title"><div><h2 id="salaryDialogTitle">Thêm khai báo lương</h2><p>Thông tin được lưu theo tháng áp dụng.</p></div><button class="secondary small" id="closeSalaryDialog" type="button">Đóng</button></div>
@@ -521,6 +521,7 @@
                   <label>Số tài khoản<input id="salaryAccountNumber" type="text" inputmode="numeric" placeholder="Không bắt buộc" /></label>
                   <label>Chủ tài khoản<input id="salaryAccountHolder" type="text" placeholder="Không bắt buộc" /></label>
                   <label class="required">Lương cơ bản<input id="salaryBaseAmount" type="text" inputmode="numeric" placeholder="0" required /></label>
+                  <label>Giờ nghỉ trưa mỗi ngày<input id="salaryLunchBreakHours" type="number" min="0" max="24" step="0.25" value="0" placeholder="Ví dụ: 2" /><small>Chỉ dùng khi tính tăng ca Xe Hàng.</small></label>
                   <div class="salary-allowances-field">
                     <div class="salary-allowances-heading"><strong>Các khoản phụ cấp</strong><button class="secondary small" id="addSalaryAllowance" type="button">+ Thêm phụ cấp</button></div>
                     <div id="salaryAllowanceRows" class="salary-allowance-rows"></div>
@@ -1952,7 +1953,7 @@
       </form>
     </dialog>
 
-  <script src="/legacy/app.js?v=travel-holiday-rule-20261002-1" type="module"></script>
+  <script src="/legacy/app.js?v=hide-vehicle-cost-20261010-1" type="module"></script>
   </body>
 </html>
 
