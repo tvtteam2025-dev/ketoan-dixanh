@@ -8,6 +8,9 @@ const state = {
   systemLogs: [],
   systemCatalogs: [],
   systemCatalogsLoaded: false,
+  incidentReports: [],
+  incidentTypes: [],
+  incidentDrivers: [],
   roster: [],
   calendarVehicleOrder: [],
   franchiseVehicles: [],
@@ -89,6 +92,7 @@ const pageMeta = {
   vouchers: ["Voucher", "Quản lý mã voucher còn hạn, hết hạn và lịch sử sử dụng."],
   promotions: ["Khuyến mãi", "Quản lý chương trình khuyến mãi có thể áp dụng cho đơn hàng."],
   orders: ["Đơn hàng", "Gán khách hàng vào tuyến, điều xe và theo dõi hóa đơn."],
+  incidentReports: ["Biên bản", "Tạo và theo dõi biên bản theo luồng Điều hành - Nhân sự - Trình ký."],
   attendance: ["Chấm Công Lái Xe", "Chọn nhóm tài xế để xem bảng công Travel hoặc Xe Hàng."],
   cargoAttendance: ["Chấm Công Xe Hàng", "Bảng công riêng cho lái xe Tải Van 945KG."],
   driverSalaries: ["Khai báo lương lái xe", "Lưu tài khoản nhận lương và mức lương theo từng tháng hiệu lực."],
@@ -149,6 +153,7 @@ const systemLogActionLabels = {
   update_calendar_vehicle_order: "Sắp xếp lịch điều xe",
   reset_calendar_vehicle_order: "Khôi phục thứ tự lịch điều xe",
   delete_cskh_shift_report: "Xóa báo cáo ca CSKH",
+  create_incident_report: "Tạo biên bản",
 };
 
 const systemLogFieldLabels = {
@@ -389,6 +394,25 @@ const els = {
   systemLogTable: document.querySelector("#systemLogTable"),
   systemLogSearch: document.querySelector("#systemLogSearch"),
   systemLogActionFilter: document.querySelector("#systemLogActionFilter"),
+  incidentReportTable: document.querySelector("#incidentReportTable"),
+  incidentReportDialog: document.querySelector("#incidentReportDialog"),
+  incidentReportForm: document.querySelector("#incidentReportForm"),
+  openIncidentReportDialogButton: document.querySelector("#openIncidentReportDialogButton"),
+  incidentReportCancelButton: document.querySelector("#incidentReportCancelButton"),
+  incidentReportType: document.querySelector("#incidentReportType"),
+  incidentReporterSelect: document.querySelector("#incidentReporterSelect"),
+  incidentDriverCombobox: document.querySelector("#incidentDriverCombobox"),
+  incidentDriverToggle: document.querySelector("#incidentDriverToggle"),
+  incidentDriverDropdown: document.querySelector("#incidentDriverDropdown"),
+  incidentDriverSearch: document.querySelector("#incidentDriverSearch"),
+  incidentDriverSearchButton: document.querySelector("#incidentDriverSearchButton"),
+  incidentDriverOptions: document.querySelector("#incidentDriverOptions"),
+  incidentDriverSelect: document.querySelector("#incidentDriverSelect"),
+  incidentDriverCode: document.querySelector("#incidentDriverCode"),
+  incidentRecordedAt: document.querySelector("#incidentRecordedAt"),
+  incidentDeadlineAt: document.querySelector("#incidentDeadlineAt"),
+  incidentReportStatus: document.querySelector("#incidentReportStatus"),
+  incidentReportSubmitButton: document.querySelector("#incidentReportSubmitButton"),
   dispatchSummary: document.querySelector("#dispatchSummary"),
   dispatchTable: document.querySelector("#dispatchTable"),
   customerSearch: document.querySelector("#customerSearch"),
@@ -826,7 +850,7 @@ async function checkAppVersion() {
 }
 
 const disabledViews = new Set(["overnightCalculator"]);
-const accountingViews = new Set(["orders", "attendance", "cargoAttendance", "fuel", "fuelStandard", "fuelPrices", "carWash", "driverSalaries", "payroll", "closedPayroll", "payrollDeductions", "invoiceOrders", "debtOrders", "commissionOrders", "reports", "permissions"]);
+const accountingViews = new Set(["orders", "incidentReports", "attendance", "cargoAttendance", "fuel", "fuelStandard", "fuelPrices", "carWash", "driverSalaries", "payroll", "closedPayroll", "payrollDeductions", "invoiceOrders", "debtOrders", "commissionOrders", "reports", "permissions"]);
 const accountingActions = new Set(["manage_invoices", "create_invoice_groups", "export_invoices", "export_excel", "export_debts", "manage_debts", "manage_commissions", "export_commissions", "manage_remittance_status", "manage_attendance", "manage_fuel", "manage_car_wash", "manage_driver_salaries", "manage_payroll_deductions", "lock_payroll", "manage_users"]);
 
 function can(action) {
@@ -837,6 +861,7 @@ function can(action) {
 
 function canView(view) {
   if (!accountingViews.has(view)) return false;
+  if (view === "incidentReports" && ["admin", "ke_toan"].includes(state.currentUser?.role)) return true;
   if (["attendance", "cargoAttendance", "fuel", "fuelStandard", "fuelPrices", "carWash", "driverSalaries", "payroll", "closedPayroll", "payrollDeductions"].includes(view) && ["admin", "ke_toan"].includes(state.currentUser?.role)) return true;
   if (state.currentUser?.role === "admin") return true;
   return (state.permissions.views || []).includes(view);
@@ -931,6 +956,7 @@ function applyPermissions() {
   });
 
   if (els.openUserDialogButton) els.openUserDialogButton.hidden = !can("manage_users");
+  if (els.openIncidentReportDialogButton) els.openIncidentReportDialogButton.hidden = !["admin", "ke_toan"].includes(state.currentUser?.role);
 
   if (els.exportDriverRemittanceButton) {
     els.exportDriverRemittanceButton.hidden = !["reports_all", "reports_revenue", "export_excel"].some((action) =>
@@ -1518,6 +1544,7 @@ function switchView(view) {
   if (view === "closedPayroll") loadClosedPayroll(false);
   if (view === "payrollDeductions") loadPayrollDeductions(false);
   if (view === "cskhShiftReports") syncCskhShiftForm();
+  if (view === "incidentReports") renderIncidentReports();
   if (state.currentUser) loadData(state.activeView, false);
 }
 
@@ -3585,6 +3612,51 @@ function renderSystemCatalogs() {
     .join("") || `<tr><td colspan="6" class="empty">Danh mục chưa có dữ liệu.</td></tr>`;
 }
 
+function renderIncidentDriverOptions(query = "") {
+  if (!els.incidentDriverSelect) return;
+  const selected = els.incidentDriverSelect.value;
+  els.incidentDriverSelect.innerHTML = [`<option value="">Chọn lái xe / nhân viên</option>`, ...state.incidentDrivers.map((item) => `<option value="${escapeHtml(`${item.name}|||${item.code}`)}">${escapeHtml(item.label)}</option>`)].join("");
+  els.incidentDriverSelect.value = state.incidentDrivers.some((item) => `${item.name}|||${item.code}` === selected) ? selected : "";
+  syncIncidentDriverSelection();
+}
+
+function syncIncidentDriverSelection() {
+  if (!els.incidentDriverSelect || !els.incidentReportForm) return;
+  const selected = state.incidentDrivers.find((item) => `${item.name}|||${item.code}` === els.incidentDriverSelect.value);
+  els.incidentReportForm.elements.nguoiBiViPham.value = selected?.name || "";
+  els.incidentReportForm.elements.MSNV.value = selected?.code || "";
+  if (els.incidentDriverToggle) els.incidentDriverToggle.textContent = selected?.label || "Chọn lái xe / nhân viên";
+}
+
+function syncIncidentDeadline() {
+  if (!els.incidentRecordedAt || !els.incidentDeadlineAt) return;
+  const recordedAt = parseDateTime(els.incidentRecordedAt.value);
+  if (!recordedAt || Number.isNaN(recordedAt.getTime())) return;
+  const incidentType = String(els.incidentReportType?.value || "").trim().toLocaleLowerCase("vi");
+  const deadline = new Date(recordedAt);
+  if (incidentType === "sự cố va chạm") deadline.setDate(deadline.getDate() + 30);
+  else deadline.setHours(deadline.getHours() + (recordedAt.getDay() === 0 ? 48 : 24));
+  els.incidentDeadlineAt.value = formatDateTimeForInput(deadline);
+}
+
+function renderIncidentReports() {
+  if (els.incidentReportType) {
+    const selected = els.incidentReportType.value;
+    els.incidentReportType.innerHTML = selectOptions(state.incidentTypes, selected, "Chọn loại biên bản");
+  }
+  if (els.incidentReporterSelect) els.incidentReporterSelect.value = state.currentUser?.displayName || state.currentUser?.username || "";
+  renderIncidentDriverOptions(els.incidentDriverSearch?.value || "");
+  if (!els.incidentReportTable) return;
+  els.incidentReportTable.innerHTML = state.incidentReports.map((row) => `<tr>
+    <td><strong>${escapeHtml(row.soBienBan || "")}</strong><div class="muted">${escapeHtml(row.ngayGhiNhan || "")}</div></td>
+    <td>${escapeHtml(row.boPhanLapBienBan || "")}<div class="muted">${escapeHtml(row.nguoiGhiNhan || "")}</div></td>
+    <td><strong>${escapeHtml(row.nguoiBiViPham || "")}</strong><div class="muted">${escapeHtml(row.MSNV || "")}</div></td>
+    <td><span class="pill">${escapeHtml(row.loaiViPham || "")}</span></td><td>${escapeHtml(row.thoiHanXuLy || "")}</td>
+    <td>${row.tienDoBienBan ? `<span class="pill running">${escapeHtml(row.tienDoBienBan)}</span>` : ""}</td>
+    <td class="incident-content-cell"><details><summary>Xem nội dung</summary><p>${escapeHtml(row.noiDungGhiNhanSuViec || "")}</p>${row.chuThich ? `<p class="muted">${escapeHtml(row.chuThich)}</p>` : ""}</details></td>
+  </tr>`).join("") || `<tr><td colspan="7" class="empty">Chưa có biên bản.</td></tr>`;
+}
+
 function renderAll() {
   renderDashboard();
   renderCustomers();
@@ -3603,6 +3675,7 @@ function renderAll() {
   renderPermissions();
   renderSystemCatalogs();
   renderSystemLogs();
+  renderIncidentReports();
   renderDriverSalaries();
   renderDriverAreas();
   renderFuelRecords();
@@ -5263,6 +5336,7 @@ const viewDataSources = {
   commissionOrders: ["commissionOrders"],
   orderFeedback: ["orders", "orderFeedback"],
   cskhShiftReports: ["cskhShiftReports", "orders"],
+  incidentReports: ["incidentReports"],
   reports: ["customers", "vouchers", "promotions", "orders"],
   permissions: ["users"],
   reopenApprovals: ["reopenRequests"],
@@ -5283,6 +5357,7 @@ const dataSourceDefinitions = {
   orders: ["đơn hàng", "/api/proxy/orders"],
   orderFeedback: ["phản hồi khách hàng", "/api/proxy/order-feedback"],
   cskhShiftReports: ["báo cáo ca CSKH", "/api/proxy/cskh-shift-reports"],
+  incidentReports: ["biên bản", "/api/proxy/incident-reports"],
   invoiceOrders: ["hóa đơn", "/api/proxy/invoice-orders"],
   invoiceGroupCandidates: ["đơn có thể gộp hóa đơn", "/api/proxy/invoice-groups/candidates"],
   debtOrders: ["công nợ", "/api/proxy/debt-orders"],
@@ -5336,6 +5411,10 @@ async function loadDataOnce(view = state.activeView, force = true) {
       const [key, label] = sources[index];
       if (result.status === "fulfilled") {
         state[key] = key === "contractPricing" ? result.value.config : (result.value.rows || []);
+        if (key === "incidentReports") {
+          state.incidentTypes = result.value.types || [];
+          state.incidentDrivers = result.value.drivers || [];
+        }
         state.loadedSources.add(key);
         if (key === "systemCatalogs") state.systemCatalogsLoaded = true;
       } else {
@@ -6087,6 +6166,72 @@ els.logoutButton?.addEventListener("click", async () => {
     // Local session is cleared below even if the server session is already gone.
   }
   clearAuth("Đã đăng xuất.");
+});
+
+els.openIncidentReportDialogButton?.addEventListener("click", () => {
+  if (!["admin", "ke_toan"].includes(state.currentUser?.role)) return;
+  els.incidentReportForm?.reset();
+  if (els.incidentReportStatus) els.incidentReportStatus.textContent = "";
+  renderIncidentReports();
+  const now = localNowForInput();
+  if (els.incidentRecordedAt) els.incidentRecordedAt.value = now;
+  syncIncidentDeadline();
+  if (els.incidentDriverDropdown) els.incidentDriverDropdown.hidden = true;
+  els.incidentDriverToggle?.setAttribute("aria-expanded", "false");
+  els.incidentReportDialog?.showModal();
+});
+els.incidentDriverToggle?.addEventListener("click", () => {
+  if (!els.incidentDriverDropdown) return;
+  const willOpen = els.incidentDriverDropdown.hidden;
+  els.incidentDriverDropdown.hidden = !willOpen;
+  els.incidentDriverToggle.setAttribute("aria-expanded", String(willOpen));
+  if (willOpen) { renderIncidentDriverOptions(els.incidentDriverSearch?.value); window.setTimeout(() => els.incidentDriverSearch?.focus(), 0); }
+});
+els.incidentDriverSearchButton?.addEventListener("click", () => renderIncidentDriverOptions(els.incidentDriverSearch?.value));
+els.incidentDriverSearch?.addEventListener("input", () => renderIncidentDriverOptions(els.incidentDriverSearch?.value));
+els.incidentDriverOptions?.addEventListener("click", (event) => {
+  const option = event.target.closest("[data-driver-value]");
+  if (!option || !els.incidentDriverSelect) return;
+  els.incidentDriverSelect.value = option.dataset.driverValue || "";
+  syncIncidentDriverSelection();
+  if (els.incidentDriverSearch) els.incidentDriverSearch.value = "";
+  renderIncidentDriverOptions("");
+  if (els.incidentDriverDropdown) els.incidentDriverDropdown.hidden = true;
+  els.incidentDriverToggle?.setAttribute("aria-expanded", "false");
+});
+document.addEventListener("click", (event) => {
+  if (!els.incidentDriverCombobox?.contains(event.target) && els.incidentDriverDropdown) {
+    els.incidentDriverDropdown.hidden = true;
+    els.incidentDriverToggle?.setAttribute("aria-expanded", "false");
+  }
+});
+els.incidentDriverSelect?.addEventListener("change", syncIncidentDriverSelection);
+els.incidentRecordedAt?.addEventListener("change", syncIncidentDeadline);
+els.incidentReportType?.addEventListener("change", syncIncidentDeadline);
+els.incidentReportCancelButton?.addEventListener("click", () => els.incidentReportDialog?.close());
+els.incidentReportForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!els.incidentDriverSelect?.value) {
+    els.incidentReportStatus.textContent = "Vui lòng chọn người bị lập biên bản.";
+    els.incidentDriverSelect.focus();
+    return;
+  }
+  if (!els.incidentReportForm.reportValidity()) return;
+  const data = new FormData(els.incidentReportForm);
+  els.incidentReportSubmitButton.disabled = true;
+  els.incidentReportStatus.textContent = "Đang lưu biên bản...";
+  try {
+    await fetchJson("/api/proxy/incident-reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ boPhanLapBienBan: data.get("boPhanLapBienBan"), soBienBan: data.get("soBienBan"), nguoiBiViPham: data.get("nguoiBiViPham"), MSNV: data.get("MSNV"), ngayGhiNhan: data.get("ngayGhiNhan"), thoiHanXuLy: data.get("thoiHanXuLy"), loaiViPham: data.get("loaiViPham"), noiDungGhiNhanSuViec: data.get("noiDungGhiNhanSuViec"), chuThich: data.get("chuThich") }) }, 90000);
+    const refreshed = await fetchJson("/api/proxy/incident-reports", {}, 90000);
+    state.incidentReports = refreshed.rows || [];
+    state.incidentTypes = refreshed.types || [];
+    state.incidentDrivers = refreshed.drivers || [];
+    state.loadedSources.add("incidentReports");
+    renderIncidentReports();
+    els.incidentReportDialog?.close();
+  } catch (error) {
+    els.incidentReportStatus.textContent = error.message || "Không tạo được biên bản.";
+  } finally { els.incidentReportSubmitButton.disabled = false; }
 });
 
 els.refreshButton.addEventListener("click", async () => {
@@ -7738,4 +7883,3 @@ const searchableSelectObserver = new MutationObserver((records) => {
 searchableSelectObserver.observe(document.body, { childList: true, subtree: true });
 initializeApp();
 window.setInterval(checkAppVersion, APP_VERSION_CHECK_INTERVAL_MS);
-

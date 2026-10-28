@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kế toán Đi Xanh</title>
-    <link rel="stylesheet" href="/legacy/styles.css?v=salary-lunch-column-20261010-1" />
+    <link rel="stylesheet" href="/legacy/styles.css?v=incident-reports-20261028" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen">
@@ -46,6 +46,7 @@
             <span class="nav-group-title">Vận hành</span>
             <div class="nav-group-items">
               <button class="nav-item" data-view="orders" type="button">Đơn hàng</button>
+              <button class="nav-item" data-view="incidentReports" type="button">Biên bản</button>
               <button class="nav-item" data-view="carWash" type="button">Quản lý rửa xe</button>
               <button class="nav-item" data-view="driverAreas" type="button">Khu vực lái xe</button>
             </div>
@@ -904,6 +905,33 @@
                 <tbody id="cskhShiftReportTable"></tbody>
               </table>
             </div>
+          </div>
+        </section>
+
+        <section id="incidentReportsView" class="view">
+          <div class="incident-report-layout">
+            <dialog id="incidentReportDialog">
+              <form id="incidentReportForm" class="dialog-panel incident-report-form">
+                <div class="panel-title"><div><h2>Tạo biên bản</h2><p class="muted">Biên bản mới được ghi nối tiếp vào sheet THEO_DOI_BIEN_BAN.</p></div></div>
+                <div class="form-grid two-col">
+                  <label class="required"><span>Bộ phận lập biên bản</span><input name="boPhanLapBienBan" id="incidentReporterSelect" readonly required /></label>
+                  <label class="required"><span>Số biên bản</span><input name="soBienBan" maxlength="80" required /></label>
+                  <label class="required"><span>Người bị lập biên bản</span><select id="incidentDriverSelect" data-searchable="true" required><option value="">Chọn lái xe / nhân viên</option></select><input name="nguoiBiViPham" type="hidden" /></label>
+                  <label class="required"><span>Mã nhân viên</span><input name="MSNV" id="incidentDriverCode" readonly required /></label>
+                  <label class="required"><span>Ngày giờ ghi nhận</span><input name="ngayGhiNhan" id="incidentRecordedAt" class="datetime-input" inputmode="numeric" placeholder="dd/MM/yyyy HH:mm" required /></label>
+                  <label class="required"><span>Ngày giờ thời hạn xử lý</span><input name="thoiHanXuLy" id="incidentDeadlineAt" class="datetime-input" inputmode="numeric" placeholder="dd/MM/yyyy HH:mm" required /></label>
+                  <label class="required full"><span>Loại biên bản</span><select name="loaiViPham" id="incidentReportType" required><option value="">Chọn loại biên bản</option></select></label>
+                  <label class="required full"><span>Nội dung ghi nhận sự việc</span><textarea name="noiDungGhiNhanSuViec" rows="5" maxlength="3000" required></textarea></label>
+                  <label class="full"><span>Chú thích</span><textarea name="chuThich" rows="2" maxlength="1000"></textarea></label>
+                </div>
+                <div class="incident-deadline-note">Thời hạn được tính tự động: 24 giờ; biên bản lập Chủ nhật là 48 giờ; “Sự cố va chạm” là 30 ngày. Có thể chỉnh lại trước khi tạo.</div>
+                <div class="form-actions"><button id="incidentReportSubmitButton" type="submit">Tạo biên bản</button><button id="incidentReportCancelButton" class="secondary" type="button">Hủy</button><span id="incidentReportStatus" class="form-status"></span></div>
+              </form>
+            </dialog>
+            <section class="panel incident-report-list">
+              <div class="panel-title"><div><h2>Theo dõi biên bản</h2><p class="muted">Luồng xử lý: ghi nhận → Điều hành xử lý → Nhân sự xử lý và trình ký.</p></div><button id="openIncidentReportDialogButton" type="button">LẬP BIÊN BẢN MỚI</button></div>
+              <div class="table-wrap"><table><thead><tr><th>Số biên bản</th><th>Bộ phận / Người ghi</th><th>Nhân sự</th><th>Loại</th><th>Thời hạn</th><th>Tiến độ</th><th>Nội dung</th></tr></thead><tbody id="incidentReportTable"></tbody></table></div>
+            </section>
           </div>
         </section>
 
@@ -1953,7 +1981,6 @@
       </form>
     </dialog>
 
-  <script src="/legacy/app.js?v=hide-vehicle-cost-20261010-1" type="module"></script>
+  <script src="/legacy/app.js?v=incident-accounting-dropdown-20261028" type="module"></script>
   </body>
 </html>
-
