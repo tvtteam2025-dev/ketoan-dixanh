@@ -2337,10 +2337,14 @@ tr[data-detail-type]:hover {
 
 .incident-report-layout { display: grid; gap: 18px; }
 .incident-report-form { max-width: 980px; }
-.incident-report-list table { min-width: 1120px; }
+.incident-report-list table { min-width: 1480px; }
 .incident-content-cell { min-width: 220px; max-width: 360px; }
 .incident-content-cell summary { color: #2563eb; cursor: pointer; font-weight: 600; }
 .incident-content-cell p { margin: 8px 0 0; white-space: pre-wrap; }
+.incident-detail-grid { display: grid; gap: 10px; grid-template-columns: repeat(2,minmax(190px,1fr)); width: min(560px,70vw); margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
+.incident-detail-grid div { display: grid; gap: 3px; }
+.incident-detail-grid span { color: var(--muted); font-size: .78rem; }
+.incident-detail-grid strong { white-space: pre-wrap; font-size: .88rem; }
 .incident-deadline-note { margin-top: 14px; padding: 12px 14px; border: 1px solid #bfdbfe; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: .92rem; }
 .incident-driver-combobox { position: relative; }
 .incident-driver-toggle { width: 100%; min-height: 42px; padding: 9px 38px 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: var(--ink); text-align: left; font-weight: 400; }
