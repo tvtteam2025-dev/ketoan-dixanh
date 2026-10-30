@@ -9,6 +9,7 @@ const state = {
   systemCatalogs: [],
   systemCatalogsLoaded: false,
   incidentReports: [],
+  incidentCurrentDepartment: "",
   incidentTypes: [],
   incidentDrivers: [],
   roster: [],
@@ -3644,7 +3645,7 @@ function renderIncidentReports() {
     const selected = els.incidentReportType.value;
     els.incidentReportType.innerHTML = selectOptions(state.incidentTypes, selected, "Chọn loại biên bản");
   }
-  if (els.incidentReporterSelect) els.incidentReporterSelect.value = state.currentUser?.displayName || state.currentUser?.username || "";
+  if (els.incidentReporterSelect) els.incidentReporterSelect.value = state.incidentCurrentDepartment || "";
   renderIncidentDriverOptions(els.incidentDriverSearch?.value || "");
   if (!els.incidentReportTable) return;
   els.incidentReportTable.innerHTML = state.incidentReports.map((row) => `<tr>
@@ -5414,6 +5415,7 @@ async function loadDataOnce(view = state.activeView, force = true) {
         if (key === "incidentReports") {
           state.incidentTypes = result.value.types || [];
           state.incidentDrivers = result.value.drivers || [];
+          state.incidentCurrentDepartment = result.value.currentDepartment || "";
         }
         state.loadedSources.add(key);
         if (key === "systemCatalogs") state.systemCatalogsLoaded = true;
@@ -6226,6 +6228,7 @@ els.incidentReportForm?.addEventListener("submit", async (event) => {
     state.incidentReports = refreshed.rows || [];
     state.incidentTypes = refreshed.types || [];
     state.incidentDrivers = refreshed.drivers || [];
+    state.incidentCurrentDepartment = refreshed.currentDepartment || "";
     state.loadedSources.add("incidentReports");
     renderIncidentReports();
     els.incidentReportDialog?.close();
