@@ -3656,6 +3656,7 @@ function renderIncidentReports() {
     <td>${row.tienDoBienBan ? `<span class="pill running">${escapeHtml(row.tienDoBienBan)}</span>` : ""}</td>
     <td><strong>${row.mucPhatTien ? `${escapeHtml(formatMoney(row.mucPhatTien) || row.mucPhatTien)} đ` : "—"}</strong></td>
     <td>${row.trinhKy ? `<span class="pill">${escapeHtml(row.trinhKy)}</span>` : "—"}</td>
+    <td><div class="incident-payroll-link"><input type="month" value="${escapeHtml(row.truLuongThang || localMonthForInput())}" data-incident-payroll-month="${escapeHtml(row.id || "")}" aria-label="Tháng trừ lương" /><button class="small" type="button" data-confirm-incident-payroll="${escapeHtml(row.id || "")}" ${!row.id || !row.mucPhatTien ? "disabled" : ""}>${row.truLuongThang ? "Cập nhật" : "Xác nhận"}</button><small data-incident-payroll-status="${escapeHtml(row.id || "")}">${row.truLuongThang ? `Đã liên kết ${escapeHtml(row.truLuongThang)}` : ""}</small></div></td>
     <td class="incident-content-cell"><details><summary>Xem chi tiết</summary><div class="incident-detail-grid">
       <div><span>Nội dung ghi nhận</span><strong>${escapeHtml(row.noiDungGhiNhanSuViec || "—")}</strong></div>
       <div><span>Chú thích</span><strong>${escapeHtml(row.chuThich || "—")}</strong></div>
@@ -3667,11 +3668,39 @@ function renderIncidentReports() {
       <div><span>Thời gian xử lý Nhân sự</span><strong>${escapeHtml(row.thoiGianXuLyNhanSu || "—")}</strong></div>
       <div><span>Ghi chú Nhân sự</span><strong>${escapeHtml(row.ghiChuNhanSu || "—")}</strong></div>
       <div><span>Trạng thái trình ký</span><strong>${escapeHtml(row.trinhKy || "—")}</strong></div>
+      <div><span>Trừ lương tháng</span><strong>${escapeHtml(row.truLuongThang || "—")}</strong></div>
       <div><span>Ra quyết định</span><strong>${escapeHtml(row.raQuyetDinh || "—")}</strong></div>
       <div><span>Số quyết định</span><strong>${escapeHtml(row.soQuyetDinh || "—")}</strong></div>
       <div><span>File đính kèm</span><strong>${escapeHtml(row.fileDinhKem || "—")}</strong></div>
     </div></details></td>
-  </tr>`).join("") || `<tr><td colspan="9" class="empty">Chưa có biên bản.</td></tr>`;
+  </tr>`).join("") || `<tr><td colspan="10" class="empty">Chưa có biên bản.</td></tr>`;
+}
+
+async function confirmIncidentPayrollDeduction(button) {
+  const incidentId = button?.dataset?.confirmIncidentPayroll || "";
+  const row = state.incidentReports.find((item) => String(item.id || "") === incidentId);
+  const input = els.incidentReportTable?.querySelector(`[data-incident-payroll-month="${CSS.escape(incidentId)}"]`);
+  const status = els.incidentReportTable?.querySelector(`[data-incident-payroll-status="${CSS.escape(incidentId)}"]`);
+  const month = input?.value || "";
+  if (!row || !month) return;
+  if (!row.mucPhatTien) { alert("Biên bản chưa có mức phạt tiền."); return; }
+  if (!confirm(`Xác nhận trừ ${formatMoney(row.mucPhatTien)} đ của ${row.nguoiBiViPham || row.MSNV} vào bảng lương tháng ${month}?`)) return;
+  button.disabled = true;
+  if (status) status.textContent = "Đang liên kết khoản trừ...";
+  try {
+    await fetchJson(`/api/proxy/incident-reports/${encodeURIComponent(incidentId)}/payroll-deduction`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month }),
+    }, 90000);
+    const refreshed = await fetchJson("/api/proxy/incident-reports", {}, 90000);
+    state.incidentReports = refreshed.rows || [];
+    renderIncidentReports();
+    if (state.payroll?.month === month && state.payroll?.viewType === "travel") await loadPayroll(true);
+  } catch (error) {
+    if (status) status.textContent = error.message || "Không thể liên kết khoản trừ.";
+    button.disabled = false;
+  }
 }
 
 function renderAll() {
@@ -6227,6 +6256,10 @@ els.incidentDriverSelect?.addEventListener("change", syncIncidentDriverSelection
 els.incidentRecordedAt?.addEventListener("change", syncIncidentDeadline);
 els.incidentReportType?.addEventListener("change", syncIncidentDeadline);
 els.incidentReportCancelButton?.addEventListener("click", () => els.incidentReportDialog?.close());
+els.incidentReportTable?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-confirm-incident-payroll]");
+  if (button) confirmIncidentPayrollDeduction(button);
+});
 els.incidentReportForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!els.incidentDriverSelect?.value) {
