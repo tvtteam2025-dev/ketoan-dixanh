@@ -396,6 +396,11 @@ const els = {
   systemLogSearch: document.querySelector("#systemLogSearch"),
   systemLogActionFilter: document.querySelector("#systemLogActionFilter"),
   incidentReportTable: document.querySelector("#incidentReportTable"),
+  incidentFilterFrom: document.querySelector("#incidentFilterFrom"),
+  incidentFilterTo: document.querySelector("#incidentFilterTo"),
+  incidentFilterEmployee: document.querySelector("#incidentFilterEmployee"),
+  incidentFilterSearchButton: document.querySelector("#incidentFilterSearchButton"),
+  incidentFilterResetButton: document.querySelector("#incidentFilterResetButton"),
   incidentReportDialog: document.querySelector("#incidentReportDialog"),
   incidentReportForm: document.querySelector("#incidentReportForm"),
   openIncidentReportDialogButton: document.querySelector("#openIncidentReportDialogButton"),
@@ -1301,10 +1306,10 @@ function shouldFormatAsMoney(input) {
 function parseDateTime(value) {
   const text = String(value || "").trim();
   if (!text) return null;
-  const vietnamese = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  const vietnamese = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (vietnamese) {
-    const [, day, month, year, hour, minute] = vietnamese;
-    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    const [, day, month, year, hour, minute, second = "0"] = vietnamese;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
     return Number.isNaN(date.getTime()) ? null : date;
   }
   const timeFirst = text.match(/^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -3648,7 +3653,17 @@ function renderIncidentReports() {
   if (els.incidentReporterSelect) els.incidentReporterSelect.value = state.incidentCurrentDepartment || "";
   renderIncidentDriverOptions(els.incidentDriverSearch?.value || "");
   if (!els.incidentReportTable) return;
-  els.incidentReportTable.innerHTML = state.incidentReports.map((row) => `<tr>
+  const fromDate = els.incidentFilterFrom?.value ? new Date(`${els.incidentFilterFrom.value}T00:00:00`) : null;
+  const toDate = els.incidentFilterTo?.value ? new Date(`${els.incidentFilterTo.value}T23:59:59.999`) : null;
+  const employeeQuery = normalize(els.incidentFilterEmployee?.value || "");
+  const filteredRows = state.incidentReports.filter((row) => {
+    const recordedAt = parseDateTime(row.ngayGhiNhan);
+    if (fromDate && (!recordedAt || recordedAt < fromDate)) return false;
+    if (toDate && (!recordedAt || recordedAt > toDate)) return false;
+    if (employeeQuery && !normalize(`${row.nguoiBiViPham || ""} ${row.MSNV || ""}`).includes(employeeQuery)) return false;
+    return true;
+  });
+  els.incidentReportTable.innerHTML = filteredRows.map((row) => `<tr>
     <td><strong>${escapeHtml(row.soBienBan || "")}</strong><div class="muted">${escapeHtml(row.ngayGhiNhan || "")}</div></td>
     <td>${escapeHtml(row.boPhanLapBienBan || "")}<div class="muted">${escapeHtml(row.nguoiGhiNhan || "")}</div></td>
     <td><strong>${escapeHtml(row.nguoiBiViPham || "")}</strong><div class="muted">${escapeHtml(row.MSNV || "")}</div></td>
@@ -3673,7 +3688,7 @@ function renderIncidentReports() {
       <div><span>Số quyết định</span><strong>${escapeHtml(row.soQuyetDinh || "—")}</strong></div>
       <div><span>File đính kèm</span><strong>${escapeHtml(row.fileDinhKem || "—")}</strong></div>
     </div></details></td>
-  </tr>`).join("") || `<tr><td colspan="10" class="empty">Chưa có biên bản.</td></tr>`;
+  </tr>`).join("") || `<tr><td colspan="10" class="empty">Không tìm thấy biên bản phù hợp.</td></tr>`;
 }
 
 async function confirmIncidentPayrollDeduction(button) {
@@ -6256,6 +6271,16 @@ els.incidentDriverSelect?.addEventListener("change", syncIncidentDriverSelection
 els.incidentRecordedAt?.addEventListener("change", syncIncidentDeadline);
 els.incidentReportType?.addEventListener("change", syncIncidentDeadline);
 els.incidentReportCancelButton?.addEventListener("click", () => els.incidentReportDialog?.close());
+els.incidentFilterSearchButton?.addEventListener("click", renderIncidentReports);
+els.incidentFilterResetButton?.addEventListener("click", () => {
+  if (els.incidentFilterFrom) els.incidentFilterFrom.value = "";
+  if (els.incidentFilterTo) els.incidentFilterTo.value = "";
+  if (els.incidentFilterEmployee) els.incidentFilterEmployee.value = "";
+  renderIncidentReports();
+});
+els.incidentFilterEmployee?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); renderIncidentReports(); }
+});
 els.incidentReportTable?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-confirm-incident-payroll]");
   if (button) confirmIncidentPayrollDeduction(button);

@@ -2344,6 +2344,12 @@ tr[data-detail-type]:hover {
 .incident-report-list .panel-title > div { min-width: 0; }
 .incident-report-list .table-wrap { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; }
 #openIncidentReportDialogButton { flex: 0 0 auto; margin-left: auto; white-space: nowrap; }
+.incident-filter-bar { display: grid; grid-template-columns: repeat(2,minmax(150px,190px)) minmax(260px,1fr) auto; gap: 10px; align-items: end; margin-bottom: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
+.incident-filter-bar label { display: grid; gap: 5px; }
+.incident-filter-bar label span { color: var(--muted); font-size: .78rem; font-weight: 700; }
+.incident-filter-actions { display: flex; gap: 8px; align-items: center; }
+.incident-filter-actions button { white-space: nowrap; }
+@media (max-width: 960px) { .incident-filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)); } .incident-filter-employee,.incident-filter-actions { grid-column: 1/-1; } }
 .incident-content-cell { min-width: 220px; max-width: 360px; }
 .incident-content-cell summary { color: #2563eb; cursor: pointer; font-weight: 600; }
 .incident-content-cell p { margin: 8px 0 0; white-space: pre-wrap; }
