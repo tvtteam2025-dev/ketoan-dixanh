@@ -2338,6 +2338,12 @@ tr[data-detail-type]:hover {
 .incident-report-layout { display: grid; gap: 18px; }
 .incident-report-form { max-width: 980px; }
 .incident-report-list table { min-width: 1720px; }
+.incident-report-layout,.incident-report-list { width: 100%; max-width: 100%; min-width: 0; }
+.incident-report-list { overflow: hidden; }
+.incident-report-list .panel-title { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.incident-report-list .panel-title > div { min-width: 0; }
+.incident-report-list .table-wrap { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; }
+#openIncidentReportDialogButton { flex: 0 0 auto; margin-left: auto; white-space: nowrap; }
 .incident-content-cell { min-width: 220px; max-width: 360px; }
 .incident-content-cell summary { color: #2563eb; cursor: pointer; font-weight: 600; }
 .incident-content-cell p { margin: 8px 0 0; white-space: pre-wrap; }
