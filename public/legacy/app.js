@@ -3671,7 +3671,7 @@ function renderIncidentReports() {
     <td>${row.tienDoBienBan ? `<span class="pill running">${escapeHtml(row.tienDoBienBan)}</span>` : ""}</td>
     <td><strong>${row.mucPhatTien ? `${escapeHtml(formatMoney(row.mucPhatTien) || row.mucPhatTien)} đ` : "—"}</strong></td>
     <td>${row.trinhKy ? `<span class="pill">${escapeHtml(row.trinhKy)}</span>` : "—"}</td>
-    <td><div class="incident-payroll-link"><input type="month" value="${escapeHtml(row.truLuongThang || localMonthForInput())}" data-incident-payroll-month="${escapeHtml(row.id || "")}" aria-label="Tháng trừ lương" /><button class="small" type="button" data-confirm-incident-payroll="${escapeHtml(row.id || "")}" ${!row.id || !row.mucPhatTien ? "disabled" : ""}>${row.truLuongThang ? "Cập nhật" : "Xác nhận"}</button><small data-incident-payroll-status="${escapeHtml(row.id || "")}">${row.truLuongThang ? `Đã liên kết ${escapeHtml(row.truLuongThang)}` : ""}</small></div></td>
+    <td><div class="incident-payroll-link"><span class="incident-payroll-status ${row.truLuongThang ? "linked" : "unlinked"}">${row.truLuongThang ? "Đã trừ lương" : "Chưa trừ lương"}</span><input type="month" value="${escapeHtml(row.truLuongThang || localMonthForInput())}" data-incident-payroll-month="${escapeHtml(row.id || "")}" aria-label="Tháng trừ lương" /><div class="incident-payroll-actions"><button class="small" type="button" data-confirm-incident-payroll="${escapeHtml(row.id || "")}" ${!row.id || !row.mucPhatTien ? "disabled" : ""}>${row.truLuongThang ? "Cập nhật" : "Xác nhận"}</button>${row.truLuongThang ? `<button class="small danger" type="button" data-revoke-incident-payroll="${escapeHtml(row.id || "")}">Thu hồi</button>` : ""}</div><small data-incident-payroll-message="${escapeHtml(row.id || "")}">${row.truLuongThang ? `Đã liên kết ${escapeHtml(row.truLuongThang)}` : ""}</small></div></td>
     <td class="incident-content-cell"><details><summary>Xem chi tiết</summary><div class="incident-detail-grid">
       <div><span>Nội dung ghi nhận</span><strong>${escapeHtml(row.noiDungGhiNhanSuViec || "—")}</strong></div>
       <div><span>Chú thích</span><strong>${escapeHtml(row.chuThich || "—")}</strong></div>
@@ -3695,7 +3695,7 @@ async function confirmIncidentPayrollDeduction(button) {
   const incidentId = button?.dataset?.confirmIncidentPayroll || "";
   const row = state.incidentReports.find((item) => String(item.id || "") === incidentId);
   const input = els.incidentReportTable?.querySelector(`[data-incident-payroll-month="${CSS.escape(incidentId)}"]`);
-  const status = els.incidentReportTable?.querySelector(`[data-incident-payroll-status="${CSS.escape(incidentId)}"]`);
+  const status = els.incidentReportTable?.querySelector(`[data-incident-payroll-message="${CSS.escape(incidentId)}"]`);
   const month = input?.value || "";
   if (!row || !month) return;
   if (!row.mucPhatTien) { alert("Biên bản chưa có mức phạt tiền."); return; }
@@ -3714,6 +3714,29 @@ async function confirmIncidentPayrollDeduction(button) {
     if (state.payroll?.month === month && state.payroll?.viewType === "travel") await loadPayroll(true);
   } catch (error) {
     if (status) status.textContent = error.message || "Không thể liên kết khoản trừ.";
+    button.disabled = false;
+  }
+}
+
+async function revokeIncidentPayrollDeduction(button) {
+  const incidentId = button?.dataset?.revokeIncidentPayroll || "";
+  const row = state.incidentReports.find((item) => String(item.id || "") === incidentId);
+  const status = els.incidentReportTable?.querySelector(`[data-incident-payroll-message="${CSS.escape(incidentId)}"]`);
+  if (!row?.truLuongThang) return;
+  if (!confirm(`Thu hồi khoản trừ vi phạm của ${row.nguoiBiViPham || row.MSNV} trong lương tháng ${row.truLuongThang}?`)) return;
+  button.disabled = true;
+  if (status) status.textContent = "Đang thu hồi khoản trừ...";
+  try {
+    const revokedMonth = row.truLuongThang;
+    await fetchJson(`/api/proxy/incident-reports/${encodeURIComponent(incidentId)}/payroll-deduction`, {
+      method: "DELETE",
+    }, 90000);
+    const refreshed = await fetchJson("/api/proxy/incident-reports", {}, 90000);
+    state.incidentReports = refreshed.rows || [];
+    renderIncidentReports();
+    if (state.payroll?.month === revokedMonth && state.payroll?.viewType === "travel") await loadPayroll(true);
+  } catch (error) {
+    if (status) status.textContent = error.message || "Không thể thu hồi khoản trừ.";
     button.disabled = false;
   }
 }
@@ -6282,8 +6305,10 @@ els.incidentFilterEmployee?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); renderIncidentReports(); }
 });
 els.incidentReportTable?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-confirm-incident-payroll]");
-  if (button) confirmIncidentPayrollDeduction(button);
+  const confirmButton = event.target.closest("[data-confirm-incident-payroll]");
+  if (confirmButton) { confirmIncidentPayrollDeduction(confirmButton); return; }
+  const revokeButton = event.target.closest("[data-revoke-incident-payroll]");
+  if (revokeButton) revokeIncidentPayrollDeduction(revokeButton);
 });
 els.incidentReportForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
