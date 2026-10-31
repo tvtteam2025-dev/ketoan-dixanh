@@ -396,6 +396,11 @@ const els = {
   systemLogSearch: document.querySelector("#systemLogSearch"),
   systemLogActionFilter: document.querySelector("#systemLogActionFilter"),
   incidentReportTable: document.querySelector("#incidentReportTable"),
+  incidentDetailsDialog: document.querySelector("#incidentDetailsDialog"),
+  incidentDetailsTitle: document.querySelector("#incidentDetailsTitle"),
+  incidentDetailsBody: document.querySelector("#incidentDetailsBody"),
+  incidentDetailsCloseButton: document.querySelector("#incidentDetailsCloseButton"),
+  incidentDetailsFooterCloseButton: document.querySelector("#incidentDetailsFooterCloseButton"),
   incidentFilterFrom: document.querySelector("#incidentFilterFrom"),
   incidentFilterTo: document.querySelector("#incidentFilterTo"),
   incidentFilterEmployee: document.querySelector("#incidentFilterEmployee"),
@@ -3672,23 +3677,32 @@ function renderIncidentReports() {
     <td><strong>${row.mucPhatTien ? `${escapeHtml(formatMoney(row.mucPhatTien) || row.mucPhatTien)} đ` : "—"}</strong></td>
     <td>${row.trinhKy ? `<span class="pill">${escapeHtml(row.trinhKy)}</span>` : "—"}</td>
     <td><div class="incident-payroll-link"><span class="incident-payroll-status ${row.truLuongThang ? "linked" : "unlinked"}">${row.truLuongThang ? "Đã trừ lương" : "Chưa trừ lương"}</span><input type="month" value="${escapeHtml(row.truLuongThang || localMonthForInput())}" data-incident-payroll-month="${escapeHtml(row.id || "")}" aria-label="Tháng trừ lương" /><div class="incident-payroll-actions"><button class="small" type="button" data-confirm-incident-payroll="${escapeHtml(row.id || "")}" ${!row.id || !row.mucPhatTien ? "disabled" : ""}>${row.truLuongThang ? "Cập nhật" : "Xác nhận"}</button>${row.truLuongThang ? `<button class="small danger" type="button" data-revoke-incident-payroll="${escapeHtml(row.id || "")}">Thu hồi</button>` : ""}</div><small data-incident-payroll-message="${escapeHtml(row.id || "")}">${row.truLuongThang ? `Đã liên kết ${escapeHtml(row.truLuongThang)}` : ""}</small></div></td>
-    <td class="incident-content-cell"><details><summary>Xem chi tiết</summary><div class="incident-detail-grid">
-      <div><span>Nội dung ghi nhận</span><strong>${escapeHtml(row.noiDungGhiNhanSuViec || "—")}</strong></div>
-      <div><span>Chú thích</span><strong>${escapeHtml(row.chuThich || "—")}</strong></div>
-      <div><span>Thời gian xử lý Điều hành</span><strong>${escapeHtml(row.thoiGianXuLyDieuHanh || "—")}</strong></div>
-      <div><span>Nội dung xử lý Điều hành</span><strong>${escapeHtml(row.noiDungXuLyDieuHanh || "—")}</strong></div>
-      <div><span>Ghi chú Điều hành</span><strong>${escapeHtml(row.ghiChuDieuHanh || "—")}</strong></div>
-      <div><span>Hình thức xử lý</span><strong>${escapeHtml(row.hinhThucXuLy || "—")}</strong></div>
-      <div><span>Mức phạt tiền</span><strong>${row.mucPhatTien ? `${escapeHtml(formatMoney(row.mucPhatTien) || row.mucPhatTien)} đ` : "—"}</strong></div>
-      <div><span>Thời gian xử lý Nhân sự</span><strong>${escapeHtml(row.thoiGianXuLyNhanSu || "—")}</strong></div>
-      <div><span>Ghi chú Nhân sự</span><strong>${escapeHtml(row.ghiChuNhanSu || "—")}</strong></div>
-      <div><span>Trạng thái trình ký</span><strong>${escapeHtml(row.trinhKy || "—")}</strong></div>
-      <div><span>Trừ lương tháng</span><strong>${escapeHtml(row.truLuongThang || "—")}</strong></div>
-      <div><span>Ra quyết định</span><strong>${escapeHtml(row.raQuyetDinh || "—")}</strong></div>
-      <div><span>Số quyết định</span><strong>${escapeHtml(row.soQuyetDinh || "—")}</strong></div>
-      <div><span>File đính kèm</span><strong>${escapeHtml(row.fileDinhKem || "—")}</strong></div>
-    </div></details></td>
+    <td class="incident-content-cell"><button class="small secondary" type="button" data-show-incident-details="${escapeHtml(row.id || "")}">Xem chi tiết</button></td>
   </tr>`).join("") || `<tr><td colspan="10" class="empty">Không tìm thấy biên bản phù hợp.</td></tr>`;
+}
+
+function openIncidentDetails(incidentId) {
+  const row = state.incidentReports.find((item) => String(item.id || "") === String(incidentId || ""));
+  if (!row || !els.incidentDetailsDialog || !els.incidentDetailsBody) return;
+  if (els.incidentDetailsTitle) els.incidentDetailsTitle.textContent = `Chi tiết biên bản ${row.soBienBan || ""}`;
+  const money = row.mucPhatTien ? `${formatMoney(row.mucPhatTien) || row.mucPhatTien} đ` : "—";
+  const detail = (label, value) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "—")}</strong></div>`;
+  els.incidentDetailsBody.innerHTML = [
+    detail("Số biên bản", row.soBienBan), detail("Ngày giờ ghi nhận", row.ngayGhiNhan),
+    detail("Bộ phận lập biên bản", row.boPhanLapBienBan), detail("Người ghi nhận", row.nguoiGhiNhan),
+    detail("Người bị lập biên bản", row.nguoiBiViPham), detail("Mã nhân viên", row.MSNV),
+    detail("Loại biên bản", row.loaiViPham), detail("Thời hạn xử lý", row.thoiHanXuLy),
+    detail("Tiến độ", row.tienDoBienBan), detail("Nội dung ghi nhận", row.noiDungGhiNhanSuViec),
+    detail("Chú thích", row.chuThich), detail("Thời gian xử lý Điều hành", row.thoiGianXuLyDieuHanh),
+    detail("Nội dung xử lý Điều hành", row.noiDungXuLyDieuHanh), detail("Ghi chú Điều hành", row.ghiChuDieuHanh),
+    detail("Hình thức xử lý", row.hinhThucXuLy), detail("Mức phạt tiền", money),
+    detail("Thời gian xử lý Nhân sự", row.thoiGianXuLyNhanSu), detail("Ghi chú Nhân sự", row.ghiChuNhanSu),
+    detail("Trạng thái trình ký", row.trinhKy), detail("Trừ lương tháng", row.truLuongThang),
+    detail("Trạng thái trừ lương", row.truLuongThang ? "Đã trừ lương" : "Chưa trừ lương"),
+    detail("Ra quyết định", row.raQuyetDinh), detail("Số quyết định", row.soQuyetDinh),
+    detail("File đính kèm", row.fileDinhKem),
+  ].join("");
+  els.incidentDetailsDialog.showModal();
 }
 
 async function confirmIncidentPayrollDeduction(button) {
@@ -6294,6 +6308,8 @@ els.incidentDriverSelect?.addEventListener("change", syncIncidentDriverSelection
 els.incidentRecordedAt?.addEventListener("change", syncIncidentDeadline);
 els.incidentReportType?.addEventListener("change", syncIncidentDeadline);
 els.incidentReportCancelButton?.addEventListener("click", () => els.incidentReportDialog?.close());
+els.incidentDetailsCloseButton?.addEventListener("click", () => els.incidentDetailsDialog?.close());
+els.incidentDetailsFooterCloseButton?.addEventListener("click", () => els.incidentDetailsDialog?.close());
 els.incidentFilterSearchButton?.addEventListener("click", renderIncidentReports);
 els.incidentFilterResetButton?.addEventListener("click", () => {
   if (els.incidentFilterFrom) els.incidentFilterFrom.value = "";
@@ -6305,6 +6321,8 @@ els.incidentFilterEmployee?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); renderIncidentReports(); }
 });
 els.incidentReportTable?.addEventListener("click", (event) => {
+  const detailButton = event.target.closest("[data-show-incident-details]");
+  if (detailButton) { openIncidentDetails(detailButton.dataset.showIncidentDetails); return; }
   const confirmButton = event.target.closest("[data-confirm-incident-payroll]");
   if (confirmButton) { confirmIncidentPayrollDeduction(confirmButton); return; }
   const revokeButton = event.target.closest("[data-revoke-incident-payroll]");

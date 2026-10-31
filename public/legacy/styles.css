@@ -2351,12 +2351,16 @@ tr[data-detail-type]:hover {
 .incident-filter-actions button { white-space: nowrap; }
 @media (max-width: 960px) { .incident-filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)); } .incident-filter-employee,.incident-filter-actions { grid-column: 1/-1; } }
 .incident-content-cell { min-width: 220px; max-width: 360px; }
-.incident-content-cell summary { color: #2563eb; cursor: pointer; font-weight: 600; }
-.incident-content-cell p { margin: 8px 0 0; white-space: pre-wrap; }
-.incident-detail-grid { display: grid; gap: 10px; grid-template-columns: repeat(2,minmax(190px,1fr)); width: min(560px,70vw); margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
+.incident-detail-grid { display: grid; gap: 10px; grid-template-columns: repeat(2,minmax(190px,1fr)); padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
 .incident-detail-grid div { display: grid; gap: 3px; }
 .incident-detail-grid span { color: var(--muted); font-size: .78rem; }
 .incident-detail-grid strong { white-space: pre-wrap; font-size: .88rem; }
+.incident-details-dialog { width: min(860px,calc(100vw - 32px)); max-width: none; padding: 0; border: 0; border-radius: 14px; }
+.incident-details-dialog::backdrop { background: rgb(15 23 42 / 55%); }
+.incident-details-panel { width: 100%; max-height: min(82vh,760px); overflow-y: auto; }
+.incident-details-panel .incident-detail-grid { width: 100%; margin-top: 4px; }
+.incident-details-close { min-width: 42px; padding: 6px 12px; font-size: 1.35rem; line-height: 1; }
+@media (max-width: 640px) { .incident-detail-grid { grid-template-columns: 1fr; } }
 .incident-payroll-link { display: grid; gap: 6px; min-width: 165px; }
 .incident-payroll-link input { min-width: 150px; }
 .incident-payroll-link small { color: var(--muted); line-height: 1.25; }

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kế toán Đi Xanh</title>
-    <link rel="stylesheet" href="/legacy/styles.css?v=incident-payroll-revoke-20261031" />
+    <link rel="stylesheet" href="/legacy/styles.css?v=incident-details-popup-20261031" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen">
@@ -536,6 +536,13 @@
                   <form id="allowanceTypeForm"><input id="allowanceTypeName" type="text" placeholder="Tên loại phụ cấp mới" required /><button type="submit">Thêm loại</button></form>
                   <div id="allowanceTypeList" class="allowance-type-list"></div>
                 </div>
+              </div>
+            </dialog>
+            <dialog id="incidentDetailsDialog" class="incident-details-dialog">
+              <div class="dialog-panel incident-details-panel">
+                <div class="panel-title"><h2 id="incidentDetailsTitle">Chi tiết biên bản</h2><button id="incidentDetailsCloseButton" class="secondary incident-details-close" type="button" aria-label="Đóng">×</button></div>
+                <div id="incidentDetailsBody" class="incident-detail-grid"></div>
+                <div class="form-actions"><button id="incidentDetailsFooterCloseButton" class="secondary" type="button">Đóng</button></div>
               </div>
             </dialog>
           </div>
@@ -1987,6 +1994,6 @@
       </form>
     </dialog>
 
-  <script src="/legacy/app.js?v=incident-payroll-revoke-20261031" type="module"></script>
+  <script src="/legacy/app.js?v=incident-details-popup-20261031" type="module"></script>
   </body>
 </html>
