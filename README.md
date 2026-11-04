@@ -1,13 +1,18 @@
-# App Kế Toán Đi Xanh
+# Hệ thống Kế Toán Đi Xanh
 
-Webapp riêng dành cho bộ phận kế toán, gồm dashboard tài chính, giao dịch thu–chi, hóa đơn, công nợ, đối tác, sổ kế toán và báo cáo.
+Repository chứa đầy đủ frontend kế toán và backend nghiệp vụ Đi Xanh.
+
+## Cấu trúc
+
+- Thư mục gốc: frontend React/Vinext dành cho bộ phận kế toán.
+- `backend/`: API FastAPI, giao diện vận hành cũ và các cấu hình triển khai mẫu.
+- Dữ liệu vận hành, `.env`, service account, virtual environment và các bản backup không được commit.
 
 ## Chạy ứng dụng
 
 Yêu cầu Node.js 22.13 trở lên.
 
 ```powershell
-cd C:\Users\Admin\Desktop\AppKeToan
 npm run dev
 ```
 
@@ -22,7 +27,7 @@ npm run start
 
 ## Dữ liệu và chức năng
 
-Ứng dụng kết nối qua API của hệ thống Đi Xanh tại `103.118.29.100:8020`, do đó sử dụng chung Google Sheets và không tạo bản sao dữ liệu.
+Frontend kết nối với API backend qua biến `DIXANH_API_URL`, sử dụng chung dữ liệu Google Sheets và không tạo bản sao dữ liệu.
 
 Phạm vi được giữ theo đúng quyền Kế toán của app cũ:
 
@@ -34,3 +39,19 @@ Phạm vi được giữ theo đúng quyền Kế toán của app cũ:
 - Tính chi phí sử dụng xe qua đêm.
 
 Đăng nhập bằng tài khoản Kế toán đã được tạo trong hệ thống Đi Xanh. Có thể đổi máy chủ dữ liệu bằng biến `DIXANH_API_URL` trong `.env.local`.
+
+## Chạy backend
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+Copy-Item .env.example .env
+.venv\Scripts\uvicorn main:app --host 127.0.0.1 --port 8020
+```
+
+Điền cấu hình Google Sheets và tài khoản trong `backend/.env` trước khi chạy. File này đã được loại trừ khỏi Git.
+
+## Quy tắc tăng ca Xe Hàng
+
+Giờ tăng ca tính lương mỗi ngày được tính từ tổng thời gian ca, trừ **10 giờ công chuẩn** và giờ nghỉ trưa đã khai báo. Mức làm tròn và đơn giá được xử lý tại backend.
