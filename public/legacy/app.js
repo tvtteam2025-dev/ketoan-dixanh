@@ -41,7 +41,7 @@ const state = {
   payrollDeductions: { month: "", rows: [], drivers: [] },
   deductionTypes: [],
   carWash: { rows: [], drivers: [], onShiftDrivers: [], fromDate: "", toDate: "", vehicleCount: 0, washCount: 0 },
-  fuel: { rows: [], drivers: [], prices: [], standard: [], standardMonth: "", standardRate: 0.075, price: 0, priceDeclared: false, standardLocked: false, standardLockedBy: "", standardLockedAt: "" },
+  fuel: { rows: [], drivers: [], prices: [], standard: [], standardMonth: "", standardRate: 0.07, price: 0, priceDeclared: false, standardLocked: false, standardLockedBy: "", standardLockedAt: "" },
   allowanceTypes: [],
   editingOrderId: "",
   filters: {
@@ -101,7 +101,7 @@ const pageMeta = {
   payroll: ["Bảng lương lái xe", "Tổng hợp lương Travel và Xe Hàng theo từng tháng."],
   closedPayroll: ["Bảng lương đã chốt", "Lưu lịch sử bảng lương đã khóa và xác nhận chuyển lương."],
   payrollDeductions: ["Quản lý khoản trừ lương", "Khai báo các khoản trừ theo từng tài xế và tháng."],
-  fuel: ["Quản lý xăng Travel", "Theo dõi nhiên liệu, định mức 0,075 lít/km và chi phí của lái xe Travel."],
+  fuel: ["Quản lý xăng Travel", "Theo dõi nhiên liệu, định mức 0,07 lít/km; riêng Toyota Innova 0,075 lít/km."],
   fuelStandard: ["Tính định mức xăng Travel", "Đối chiếu kilomet, số lít đã đổ và định mức tiêu hao của lái xe Travel."],
   fuelPrices: ["Khai báo giá xăng theo tháng", "Lưu đơn giá xăng áp dụng cho việc tính định mức theo từng tháng."],
   carWash: ["Quản lý rửa xe", "Xác nhận lượt rửa theo danh sách tài xế Travel lên ca trong ngày."],
@@ -4067,7 +4067,7 @@ async function loadFuelStandard(month = els.fuelStandardMonth?.value || localMon
   if (els.fuelStandardMonth) els.fuelStandardMonth.value = month;
   try {
     const payload = await fetchJson(`/api/proxy/accounting/fuel-standard?month=${encodeURIComponent(month)}`, {}, 90000);
-    state.fuel = { ...state.fuel, standard: payload.rows || [], standardMonth: payload.month || month, standardRate: payload.standardRate || 0.075, price: payload.price || 0, priceDeclared: Boolean(payload.priceDeclared), standardLocked: Boolean(payload.locked), standardLockedBy: payload.lockedBy || "", standardLockedAt: payload.lockedAt || "" };
+    state.fuel = { ...state.fuel, standard: payload.rows || [], standardMonth: payload.month || month, standardRate: payload.standardRate || 0.07, price: payload.price || 0, priceDeclared: Boolean(payload.priceDeclared), standardLocked: Boolean(payload.locked), standardLockedBy: payload.lockedBy || "", standardLockedAt: payload.lockedAt || "" };
     renderFuelStandard();
   } catch (error) {
     if (els.fuelStandardSummary) els.fuelStandardSummary.textContent = error.message || "Không thể tính định mức xăng.";
@@ -4088,8 +4088,8 @@ async function loadFuelRecords() {
     const prices = pricesResult.status === "fulfilled" ? pricesResult.value : { rows: state.fuel?.prices || [] };
     const standard = standardResult.status === "fulfilled"
       ? standardResult.value
-      : { rows: state.fuel?.standard || [], month, standardRate: state.fuel?.standardRate || 0.075, price: state.fuel?.price || 0, priceDeclared: Boolean(state.fuel?.priceDeclared) };
-    state.fuel = { ...fuel, prices: prices.rows || [], standard: standard.rows || [], standardMonth: standard.month || month, standardRate: standard.standardRate || 0.075, price: standard.price || 0, priceDeclared: Boolean(standard.priceDeclared), standardLocked: Boolean(standard.locked), standardLockedBy: standard.lockedBy || "", standardLockedAt: standard.lockedAt || "" };
+      : { rows: state.fuel?.standard || [], month, standardRate: state.fuel?.standardRate || 0.07, price: state.fuel?.price || 0, priceDeclared: Boolean(state.fuel?.priceDeclared) };
+    state.fuel = { ...fuel, prices: prices.rows || [], standard: standard.rows || [], standardMonth: standard.month || month, standardRate: standard.standardRate || 0.07, price: standard.price || 0, priceDeclared: Boolean(standard.priceDeclared), standardLocked: Boolean(standard.locked), standardLockedBy: standard.lockedBy || "", standardLockedAt: standard.lockedAt || "" };
     renderFuelRecords();
     renderFuelPrices();
     renderFuelStandard();
@@ -4144,7 +4144,7 @@ async function loadFuelStandardView() {
   if (els.fuelStandardMonth) els.fuelStandardMonth.value = month;
   try {
     const standard = await fetchJson(`/api/proxy/accounting/fuel-standard?month=${encodeURIComponent(month)}`, {}, 90000);
-    state.fuel = { ...state.fuel, standard: standard.rows || [], standardMonth: standard.month || month, standardRate: standard.standardRate || 0.075, price: standard.price || 0, priceDeclared: Boolean(standard.priceDeclared), standardLocked: Boolean(standard.locked), standardLockedBy: standard.lockedBy || "", standardLockedAt: standard.lockedAt || "" };
+    state.fuel = { ...state.fuel, standard: standard.rows || [], standardMonth: standard.month || month, standardRate: standard.standardRate || 0.07, price: standard.price || 0, priceDeclared: Boolean(standard.priceDeclared), standardLocked: Boolean(standard.locked), standardLockedBy: standard.lockedBy || "", standardLockedAt: standard.lockedAt || "" };
     renderFuelStandard();
   } catch (error) {
     if (els.fuelStandardSummary) els.fuelStandardSummary.textContent = error.message || "Không thể tải định mức xăng.";
@@ -4549,7 +4549,7 @@ async function exportFuelStandard() {
     const rawStandardRate = payload.standardRate;
     const standardRate = typeof rawStandardRate === "number"
       ? rawStandardRate
-      : Number(String(rawStandardRate || "0.075").trim().replace(",", ".")) || 0.075;
+      : Number(String(rawStandardRate || "0.07").trim().replace(",", ".")) || 0.07;
     const standardRateText = standardRate.toLocaleString("vi-VN", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
     const monthKey = String(month).slice(0, 7);
     const fuelRowMonth = (row) => {
@@ -4581,7 +4581,7 @@ async function exportFuelStandard() {
       return `<Worksheet ss:Name="${xmlText(name)}"><Table>${columns}<Row ss:Height="28"><Cell ss:MergeAcross="${mergeAcross}" ss:StyleID="Title"><Data ss:Type="String">${xmlText(title)}</Data></Cell></Row><Row ss:Height="22"><Cell ss:MergeAcross="${mergeAcross}" ss:StyleID="Note"><Data ss:Type="String">${xmlText(note)}</Data></Cell></Row>${xmlRow(headers, "Header", 34)}${body}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>3</SplitHorizontal><TopRowBottomPane>3</TopRowBottomPane></WorksheetOptions></Worksheet>`;
     };
     const borders = `<Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C8D9DB"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C8D9DB"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C8D9DB"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C8D9DB"/></Borders>`;
-    const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40"><DocumentProperties xmlns="urn:schemas-microsoft-com:office:office"><Author>ĐI XANH FINANCE</Author><Created>${new Date().toISOString()}</Created></DocumentProperties><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="10"/></Style><Style ss:ID="Title"><Font ss:FontName="Arial" ss:Size="15" ss:Bold="1" ss:Color="#0B5F68"/></Style><Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>${borders}<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/><Interior ss:Color="#D9EEEE" ss:Pattern="Solid"/></Style><Style ss:ID="Body"><Alignment ss:Vertical="Center"/>${borders}</Style><Style ss:ID="BodyAlt"><Alignment ss:Vertical="Center"/>${borders}<Interior ss:Color="#F5FAFA" ss:Pattern="Solid"/></Style><Style ss:ID="Note"><Font ss:FontName="Arial" ss:Size="10" ss:Italic="1" ss:Color="#60777D"/></Style></Styles>${xmlWorksheet("Định mức", `Tính định mức xăng Travel tháng ${month}`, `Định mức chuẩn: ${standardRateText} lít/km · Giá xăng: ${payload.priceDeclared ? `${formatMoney(payload.price)} VNĐ/lít` : "chưa khai báo"}`, standardHeaders, standardData, standardWidths)}${xmlWorksheet("Nhập đổ xăng", `Chi tiết nhập đổ xăng Travel tháng ${month}`, `${detailData.length} lần đổ xăng trong tháng · Ngày hiển thị theo dd/MM/yyyy`, detailHeaders, detailData, detailWidths)}</Workbook>`;
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40"><DocumentProperties xmlns="urn:schemas-microsoft-com:office:office"><Author>ĐI XANH FINANCE</Author><Created>${new Date().toISOString()}</Created></DocumentProperties><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="10"/></Style><Style ss:ID="Title"><Font ss:FontName="Arial" ss:Size="15" ss:Bold="1" ss:Color="#0B5F68"/></Style><Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>${borders}<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/><Interior ss:Color="#D9EEEE" ss:Pattern="Solid"/></Style><Style ss:ID="Body"><Alignment ss:Vertical="Center"/>${borders}</Style><Style ss:ID="BodyAlt"><Alignment ss:Vertical="Center"/>${borders}<Interior ss:Color="#F5FAFA" ss:Pattern="Solid"/></Style><Style ss:ID="Note"><Font ss:FontName="Arial" ss:Size="10" ss:Italic="1" ss:Color="#60777D"/></Style></Styles>${xmlWorksheet("Định mức", `Tính định mức xăng Travel tháng ${month}`, `Định mức chuẩn: ${standardRateText} lít/km; riêng Toyota Innova 0,075 lít/km · Giá xăng: ${payload.priceDeclared ? `${formatMoney(payload.price)} VNĐ/lít` : "chưa khai báo"}`, standardHeaders, standardData, standardWidths)}${xmlWorksheet("Nhập đổ xăng", `Chi tiết nhập đổ xăng Travel tháng ${month}`, `${detailData.length} lần đổ xăng trong tháng · Ngày hiển thị theo dd/MM/yyyy`, detailHeaders, detailData, detailWidths)}</Workbook>`;
     const blob = new Blob([`\ufeff${xml}`], { type: "application/vnd.ms-excel" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);

@@ -591,7 +591,7 @@
               <div id="fuelStandardSummary" class="fuel-summary">Chưa tải định mức</div>
             </div>
             <section class="fuel-standard-panel">
-              <div class="fuel-standard-heading"><div><h3>Định mức tiêu hao</h3><p>Định mức chuẩn 0,075 lít/km. Vượt 10 lít miễn thu; từ lít thứ 11 tính theo giá xăng tháng. Tiết kiệm trên 5 lít được thưởng 500.000 VNĐ.</p></div></div>
+              <div class="fuel-standard-heading"><div><h3>Định mức tiêu hao</h3><p>Định mức chuẩn 0,07 lít/km; riêng xe Toyota Innova là 0,075 lít/km. Vượt 10 lít miễn thu; từ lít thứ 11 tính theo giá xăng tháng. Tiết kiệm trên 5 lít được thưởng 500.000 VNĐ.</p></div></div>
               <div class="fuel-standard-toolbar"><label>Tháng tính định mức<input id="fuelStandardMonth" type="month" /></label><button id="fuelStandardRefreshButton" class="secondary" type="button">Tính định mức</button><button id="fuelStandardExportButton" class="secondary" type="button">Xuất Excel</button></div>
               <div class="table-wrap fuel-standard-table-wrap"><table><thead><tr><th>STT</th><th>Tài xế</th><th>BSX</th><th>Km đã chạy</th><th>ĐM chuẩn (lít)</th><th>Số lít đã đổ</th><th>Chênh lệch</th><th>Thu vượt ĐM</th><th>Tiết kiệm (lít)</th><th>Thưởng</th></tr></thead><tbody id="fuelStandardTable"></tbody></table></div>
             </section>
@@ -609,7 +609,7 @@
               <form id="fuelPriceForm" class="fuel-price-form">
                 <label class="required">Tháng áp dụng<input id="fuelPriceMonth" type="month" required /></label>
                 <label class="required">Giá xăng hiện tại / lít<input id="fuelPriceAmount" type="text" inputmode="numeric" placeholder="Ví dụ: 20,410" required /></label>
-                <label>Định mức chuẩn<input type="text" value="0,075 lít/km" readonly /></label>
+                <label>Định mức chuẩn<input type="text" value="0,07 lít/km · Innova 0,075" readonly /></label>
                 <div class="fuel-form-actions"><span id="fuelPriceStatus" class="form-status"></span><button id="fuelPriceSubmitButton" type="submit">Lưu giá theo tháng</button></div>
               </form>
               <div class="table-wrap fuel-price-table-wrap"><table><thead><tr><th>STT</th><th>Tháng</th><th>Giá xăng / lít</th><th>Người khai báo</th><th>Thời gian</th><th>Thao tác</th></tr></thead><tbody id="fuelPriceTable"></tbody></table></div>
