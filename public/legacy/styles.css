@@ -3895,6 +3895,8 @@ body {
 .stats-grid article::after,.report-view-summary article::after { content:""; position:absolute; inset:0 auto 0 0; width:3px; background:linear-gradient(#1bb29a,#247b91); }
 button { border-radius: 10px; }
 button:not(.nav-item):not(.secondary) { background: linear-gradient(135deg,#078675,#11798a); }
+button.danger:not(.secondary),
+button.small.danger:not(.secondary) { color: #fff; }
 input,select,textarea { border-radius: 10px; }
 .table-wrap { border-radius: 13px; border: 1px solid #dce8ea; }
 table thead th { background: #eff6f6; color: #587077; letter-spacing: .025em; }
